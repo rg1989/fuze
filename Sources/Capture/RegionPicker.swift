@@ -18,6 +18,15 @@ private final class RegionPickerView: NSView {
     var onResult: ((RegionPickResult) -> Void)?
     private var dragStart: CGPoint?
     private var dragCurrent: CGPoint?
+    /// Frozen = selection confirmed; keep showing the dim + hole, stop
+    /// reacting to input (the window also starts ignoring mouse events so
+    /// the armed/recording HUD stays clickable underneath the cursor).
+    private(set) var isFrozen = false
+
+    func freeze() {
+        isFrozen = true
+        needsDisplay = true
+    }
 
     override var acceptsFirstResponder: Bool { true }
 
@@ -38,10 +47,15 @@ private final class RegionPickerView: NSView {
             // Punch a clear hole for the selection (window is non-opaque).
             NSColor.clear.setFill()
             rect.fill(using: .copy)
+            // Stroke fully OUTSIDE the selection so the outline can never
+            // appear inside the recorded region.
             NSColor.white.setStroke()
-            let outline = NSBezierPath(rect: rect)
-            outline.lineWidth = 1
+            let outline = NSBezierPath(rect: rect.insetBy(dx: -1, dy: -1))
+            outline.lineWidth = 2
             outline.stroke()
+        } else if isFrozen {
+            // Frozen full-overlay state without a rect shouldn't happen;
+            // draw nothing extra.
         } else {
             let hint = "Drag to select a region   ·   Return records the entire screen   ·   Esc cancels"
             let attrs: [NSAttributedString.Key: Any] = [
@@ -56,17 +70,20 @@ private final class RegionPickerView: NSView {
     }
 
     override func mouseDown(with event: NSEvent) {
+        guard !isFrozen else { return }
         dragStart = convert(event.locationInWindow, from: nil)
         dragCurrent = dragStart
         needsDisplay = true
     }
 
     override func mouseDragged(with event: NSEvent) {
+        guard !isFrozen else { return }
         dragCurrent = convert(event.locationInWindow, from: nil)
         needsDisplay = true
     }
 
     override func mouseUp(with event: NSEvent) {
+        guard !isFrozen else { return }
         dragCurrent = convert(event.locationInWindow, from: nil)
         guard let rect = selectionRect, rect.width >= 8, rect.height >= 8,
               let window else {
@@ -86,6 +103,7 @@ private final class RegionPickerView: NSView {
     }
 
     override func keyDown(with event: NSEvent) {
+        guard !isFrozen else { return }
         switch event.keyCode {
         case 53:        // Esc
             onResult?(.cancelled)
@@ -122,7 +140,14 @@ final class RegionPicker {
         window.isReleasedWhenClosed = false
         let view = RegionPickerView(frame: NSRect(origin: .zero, size: screen.frame.size))
         view.onResult = { [weak self] result in
-            self?.dismiss()
+            switch result {
+            case .region:
+                // Keep the dim + clear hole on screen through the armed and
+                // recording phases; RecordingService dismisses on cancel/finish.
+                self?.freezeInPlace()
+            case .fullScreen, .cancelled:
+                self?.dismiss()
+            }
             completion(result)
         }
         window.contentView = view
@@ -130,6 +155,15 @@ final class RegionPicker {
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
         window.makeFirstResponder(view)
+    }
+
+    /// Selection confirmed: stop interacting but stay visible. Mouse events
+    /// pass through to whatever is underneath (including the REC HUD).
+    private func freezeInPlace() {
+        guard let window else { return }
+        (window.contentView as? RegionPickerView)?.freeze()
+        window.ignoresMouseEvents = true
+        window.resignKey()
     }
 
     func dismiss() {

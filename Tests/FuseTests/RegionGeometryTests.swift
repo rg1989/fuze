@@ -75,8 +75,8 @@ final class RecordingStateMachineTests: XCTestCase {
         assertTransition(.armed, .toggle, becomes: .recording, doing: .startProcess)
     }
 
-    func testArmedCancelReturnsToIdle() {
-        assertTransition(.armed, .regionCancelled, becomes: .idle, doing: .none)
+    func testArmedCancelReturnsToIdleAndDropsOverlay() {
+        assertTransition(.armed, .regionCancelled, becomes: .idle, doing: .dismissRegionPicker)
     }
 
     func testRegionCancelledReturnsToIdle() {

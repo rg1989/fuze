@@ -61,8 +61,38 @@ final class RecHUD {
         set { model.onCancel = newValue }
     }
 
+    /// Where to place the HUD panel (Cocoa coords). Armed: inside the
+    /// selection, just above its lower border, centered. Recording: just
+    /// BELOW the selection (outside the captured region — the HUD must not
+    /// appear in the video), falling back to above the top edge, then inside.
+    /// nil region = full screen: bottom-center of the visible frame.
+    static func hudOrigin(mode: RecHUDModel.Mode, region: CGRect?,
+                          panelSize: CGSize, screenVisible: CGRect) -> CGPoint {
+        func clampX(_ x: CGFloat) -> CGFloat {
+            min(max(x, screenVisible.minX + 8), screenVisible.maxX - panelSize.width - 8)
+        }
+        guard let region else {
+            return CGPoint(x: clampX(screenVisible.midX - panelSize.width / 2),
+                           y: screenVisible.minY + 24)
+        }
+        let x = clampX(region.midX - panelSize.width / 2)
+        switch mode {
+        case .armed:
+            return CGPoint(x: x, y: max(region.minY + 12, screenVisible.minY + 8))
+        case .recording:
+            let below = region.minY - panelSize.height - 8
+            if below >= screenVisible.minY { return CGPoint(x: x, y: below) }
+            let above = region.maxY + 8
+            if above + panelSize.height <= screenVisible.maxY { return CGPoint(x: x, y: above) }
+            return CGPoint(x: x, y: region.minY + 12)   // no room outside
+        }
+    }
+
+    private var region: CGRect?
+
     /// Pre-recording controls: region picked, waiting for Start/Cancel.
-    func showArmed() {
+    func showArmed(near region: CGRect?) {
+        self.region = region
         timer?.invalidate()
         timer = nil
         startedAt = nil
@@ -70,7 +100,8 @@ final class RecHUD {
         presentPanel()
     }
 
-    func show() {
+    func show(near region: CGRect?) {
+        self.region = region
         model.mode = .recording
         startedAt = Date()
         model.elapsedText = "0:00"
@@ -98,9 +129,15 @@ final class RecHUD {
             panel.contentView = NSHostingView(rootView: RecHUDView(model: model))
             self.panel = panel
         }
-        if let screen = NSScreen.main {
-            let f = screen.visibleFrame
-            panel?.setFrameOrigin(CGPoint(x: f.maxX - 270, y: f.maxY - 64))
+        let screen = region.flatMap { r in
+            NSScreen.screens.first { $0.frame.intersects(r) }
+        } ?? NSScreen.main
+        if let screen, let panel {
+            panel.setFrameOrigin(Self.hudOrigin(
+                mode: model.mode,
+                region: region,
+                panelSize: panel.frame.size,
+                screenVisible: screen.visibleFrame))
         }
         panel?.orderFrontRegardless()
     }

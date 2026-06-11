@@ -39,7 +39,7 @@ enum RecordingStateMachine {
         case (.armed, .startRequested), (.armed, .toggle):
             return (.recording, .startProcess)   // hotkey also starts when armed
         case (.armed, .regionCancelled):
-            return (.idle, .none)
+            return (.idle, .dismissRegionPicker) // tear the frozen overlay down
         case (.recording, .toggle), (.recording, .stopRequested):
             return (.finishing, .stopProcess)
         case (.recording, .processExited):
@@ -62,6 +62,9 @@ final class RecordingService {
     private var process: Process?
     private var outputURL: URL?
     private var pendingRegion: CGRect?   // Cocoa coords; nil = entire screen
+    /// The confirmed selection (Cocoa coords) for HUD placement; survives
+    /// through the recording phase, cleared on finalize. nil = full screen.
+    private(set) var currentRegion: CGRect?
 
     /// Finished file (may not exist / be empty — consumer checks), or nil
     /// when nothing was recorded. Set by CaptureController.
@@ -89,9 +92,11 @@ final class RecordingService {
                     self.handle(.regionCancelled)
                 case .fullScreen:
                     self.pendingRegion = nil
+                    self.currentRegion = nil
                     self.handle(.regionConfirmed)
                 case .region(let cocoaRect):
                     self.pendingRegion = cocoaRect
+                    self.currentRegion = cocoaRect
                     self.handle(.regionConfirmed)
                 }
             }
@@ -102,6 +107,8 @@ final class RecordingService {
         case .stopProcess:
             process?.interrupt()   // SIGINT — screencapture finalizes the .mov
         case .finalize:
+            picker.dismiss()        // overlay stays up through recording; drop it now
+            currentRegion = nil
             let url = outputURL
             process = nil
             outputURL = nil

@@ -27,13 +27,14 @@ final class CaptureController {
         ])
 
         recorder.onPhaseChange = { [weak self] phase in
+            guard let self else { return }
             switch phase {
             case .armed:
-                self?.hud.showArmed()
+                self.hud.showArmed(near: self.recorder.currentRegion)
             case .recording:
-                self?.hud.show()
+                self.hud.show(near: self.recorder.currentRegion)
             case .idle, .finishing:
-                self?.hud.hide()
+                self.hud.hide()
             case .selectingRegion:
                 break
             }
