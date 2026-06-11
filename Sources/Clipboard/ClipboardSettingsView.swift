@@ -5,7 +5,8 @@ import SwiftUI
 struct ClipboardSettingsView: View {
     @AppStorage("clipboard.enabled") private var enabled = true
     @AppStorage("clipboard.maxItems") private var maxItems = 500
-    @AppStorage("clipboard.copySound") private var copySound = true
+    @AppStorage(CopySound.enabledKey) private var copySound = true
+    @AppStorage(CopySound.nameKey) private var copySoundName = CopySound.defaultName
     @State private var showClearConfirmation = false
     @State private var clearError: String?
     @State private var hasAccessibility = PermissionsService.hasAccessibility
@@ -23,6 +24,16 @@ struct ClipboardSettingsView: View {
                 }
                 KeyboardShortcuts.Recorder("Open paste picker", name: .pastePicker)
                 Toggle("Play sound when something is copied", isOn: $copySound)
+                if copySound {
+                    Picker("Copy sound", selection: $copySoundName) {
+                        ForEach(CopySound.availableSounds(), id: \.self) { name in
+                            Text(name).tag(name)
+                        }
+                    }
+                    .onChange(of: copySoundName) { _, newName in
+                        CopySound.preview(newName)   // hear it as you pick
+                    }
+                }
             }
             Section("History") {
                 Button("Clear unpinned history…", role: .destructive) { showClearConfirmation = true }
