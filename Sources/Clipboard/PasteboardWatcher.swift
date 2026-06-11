@@ -95,9 +95,15 @@ final class PasteboardWatcher {
     }
 
     private func poll() {
-        guard UserDefaults.standard.bool(forKey: "clipboard.enabled") else { return }
         let count = pasteboard.changeCount
         guard count != lastChangeCount else { return }
+        // Swallow (never capture) anything copied while paused or disabled —
+        // otherwise resuming would retroactively record it.
+        guard !PauseManager.shared.isPaused,
+              UserDefaults.standard.bool(forKey: "clipboard.enabled") else {
+            lastChangeCount = count
+            return
+        }
         lastChangeCount = count
         capture()
     }
@@ -106,6 +112,11 @@ final class PasteboardWatcher {
         let typeStrings = Set((pasteboard.types ?? []).map(\.rawValue))
         guard CaptureClassifier.shouldCapture(types: typeStrings) else {
             Log.clipboard.debug("skipping pasteboard change (concealed/transient/internal)")
+            return
+        }
+        let sourceBundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+        if ClipboardExclusions.isExcluded(sourceBundleID, in: ClipboardExclusions.current()) {
+            Log.clipboard.debug("skipping capture from excluded app")
             return
         }
         guard let firstItem = pasteboard.pasteboardItems?.first else { return }
@@ -147,7 +158,7 @@ final class PasteboardWatcher {
                                                          fileURLs: fileURLs, imagePixelSize: imagePixelSize)
         do {
             try store.save(kind: kind, preview: preview, thumbnail: thumbnail,
-                           sourceApp: NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
+                           sourceApp: sourceBundleID,
                            contentHash: ClipboardStore.hash(representations: representations),
                            representations: representations)
             let configured = UserDefaults.standard.integer(forKey: "clipboard.maxItems")
