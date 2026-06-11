@@ -46,3 +46,56 @@ final class RegionGeometryTests: XCTestCase {
         XCTAssertEqual(flipped, CGRect(x: 0, y: 0, width: 1728, height: 1117))
     }
 }
+
+final class RecordingStateMachineTests: XCTestCase {
+    typealias SM = RecordingStateMachine
+
+    private func assertTransition(_ phase: SM.Phase, _ event: SM.Event,
+                                  becomes expectedPhase: SM.Phase,
+                                  doing expectedAction: SM.Action,
+                                  file: StaticString = #filePath, line: UInt = #line) {
+        let (next, action) = SM.transition(from: phase, on: event)
+        XCTAssertEqual(next, expectedPhase, file: file, line: line)
+        XCTAssertEqual(action, expectedAction, file: file, line: line)
+    }
+
+    func testToggleFromIdlePresentsPicker() {
+        assertTransition(.idle, .toggle, becomes: .selectingRegion, doing: .presentRegionPicker)
+    }
+
+    func testRegionConfirmedStartsProcess() {
+        assertTransition(.selectingRegion, .regionConfirmed, becomes: .recording, doing: .startProcess)
+    }
+
+    func testRegionCancelledReturnsToIdle() {
+        assertTransition(.selectingRegion, .regionCancelled, becomes: .idle, doing: .none)
+    }
+
+    func testToggleWhileSelectingDismissesPicker() {
+        assertTransition(.selectingRegion, .toggle, becomes: .idle, doing: .dismissRegionPicker)
+    }
+
+    func testToggleWhileRecordingStopsProcess() {
+        assertTransition(.recording, .toggle, becomes: .finishing, doing: .stopProcess)
+    }
+
+    func testStopRequestWhileRecordingStopsProcess() {
+        assertTransition(.recording, .stopRequested, becomes: .finishing, doing: .stopProcess)
+    }
+
+    func testProcessExitWhileFinishingFinalizes() {
+        assertTransition(.finishing, .processExited, becomes: .idle, doing: .finalize)
+    }
+
+    func testUnexpectedProcessExitWhileRecordingStillFinalizes() {
+        // screencapture died or was killed externally — recover, don't wedge.
+        assertTransition(.recording, .processExited, becomes: .idle, doing: .finalize)
+    }
+
+    func testNoOps() {
+        assertTransition(.idle, .processExited, becomes: .idle, doing: .none)
+        assertTransition(.idle, .stopRequested, becomes: .idle, doing: .none)
+        assertTransition(.finishing, .toggle, becomes: .finishing, doing: .none)
+        assertTransition(.recording, .regionConfirmed, becomes: .recording, doing: .none)
+    }
+}
