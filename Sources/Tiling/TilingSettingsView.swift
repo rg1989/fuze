@@ -4,6 +4,7 @@ import SwiftUI
 struct TilingSettingsView: View {
     @AppStorage("tiling.enabled") private var tilingEnabled = true
     @AppStorage("tiling.gap") private var gap = 0.0
+    @AppStorage("tiling.snapDrag") private var snapDrag = true
     @State private var hasAccessibility = PermissionsService.hasAccessibility
 
     private let refresh = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
@@ -32,6 +33,8 @@ struct TilingSettingsView: View {
             }
             Section {
                 Toggle("Enable window tiling", isOn: $tilingEnabled)
+                Toggle("Snap windows dragged to screen edges", isOn: $snapDrag)
+                    .disabled(!tilingEnabled)
                 HStack {
                     Slider(value: $gap, in: 0...24, step: 1) {
                         Text("Window gap")

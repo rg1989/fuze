@@ -43,6 +43,40 @@ struct AXElement {
         return AXElement(raw: value as! AXUIElement)
     }
 
+    var parent: AXElement? {
+        guard let value = copyValue(kAXParentAttribute),
+              CFGetTypeID(value) == AXUIElementGetTypeID() else { return nil }
+        return AXElement(raw: value as! AXUIElement)
+    }
+
+    /// The window this element belongs to: the element itself if it IS a
+    /// window, its kAXWindowAttribute when exposed, else a bounded walk up
+    /// the parent chain. nil for elements outside any window (e.g. menu bar).
+    var containingWindow: AXElement? {
+        if role == kAXWindowRole { return self }
+        if let value = copyValue(kAXWindowAttribute),
+           CFGetTypeID(value) == AXUIElementGetTypeID() {
+            return AXElement(raw: value as! AXUIElement)
+        }
+        var current = parent
+        for _ in 0..<20 {
+            guard let element = current else { return nil }
+            if element.role == kAXWindowRole { return element }
+            current = element.parent
+        }
+        return nil
+    }
+
+    /// AX hit test at a global TOP-LEFT-origin point.
+    static func element(atTopLeftPoint point: CGPoint) -> AXElement? {
+        var element: AXUIElement?
+        guard AXUIElementCopyElementAtPosition(AXUIElementCreateSystemWide(),
+                                               Float(point.x), Float(point.y),
+                                               &element) == .success,
+              let element else { return nil }
+        return AXElement(raw: element)
+    }
+
     var position: CGPoint? {
         guard let value = copyValue(kAXPositionAttribute),
               CFGetTypeID(value) == AXValueGetTypeID() else { return nil }

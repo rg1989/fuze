@@ -46,14 +46,6 @@ enum WindowMover {
             Log.tiling.warning("tile \(action.rawValue, privacy: .public): no focused window")
             return
         }
-        guard let primary = NSScreen.screens.first else {
-            Log.tiling.error("tile \(action.rawValue, privacy: .public): no screens attached")
-            return
-        }
-        let primaryHeight = primary.frame.height
-        let currentSize = window.size ?? .zero
-        let gap = CGFloat(UserDefaults.standard.double(forKey: "tiling.gap"))
-
         // For .nextDisplay: pick the NEXT screen in NSScreen.screens cyclically,
         // then center the window (size kept, clamped) on that screen. Geometrically
         // identical to .center on the next screen's visibleFrame.
@@ -70,12 +62,24 @@ enum WindowMover {
             geometryAction = action
         }
 
-        let cocoaFrame = TileGeometry.frame(for: geometryAction,
-                                            visibleFrame: targetScreen.visibleFrame,
-                                            currentWindowSize: currentSize,
+        apply(geometryAction, to: window, on: targetScreen)
+    }
+
+    /// Apply `action` to a specific window on a specific screen — used by the
+    /// hotkey path above and by SnapDragMonitor (which targets the dragged
+    /// window on the screen under the cursor, not the frontmost window).
+    static func apply(_ action: TileAction, to window: AXElement, on screen: NSScreen) {
+        guard let primary = NSScreen.screens.first else {
+            Log.tiling.error("tile \(action.rawValue, privacy: .public): no screens attached")
+            return
+        }
+        let gap = CGFloat(UserDefaults.standard.double(forKey: "tiling.gap"))
+        let cocoaFrame = TileGeometry.frame(for: action,
+                                            visibleFrame: screen.visibleFrame,
+                                            currentWindowSize: window.size ?? .zero,
                                             gap: gap)
         let axOrigin = ScreenCoords.axOrigin(ofCocoaRect: cocoaFrame,
-                                             primaryScreenHeight: primaryHeight)
+                                             primaryScreenHeight: primary.frame.height)
 
         // Clamp-resistant apply order: setPosition → setSize → setPosition.
         // Apps like Terminal snap their size to character-cell multiples; if the

@@ -18,10 +18,13 @@ final class TilingController {
         (.tileNextDisplay, .nextDisplay),
     ]
 
+    private let snapDragMonitor = SnapDragMonitor()
+
     func start() {
         UserDefaults.standard.register(defaults: [
             "tiling.enabled": true,
             "tiling.gap": 0.0,
+            "tiling.snapDrag": true,
         ])
         for (name, action) in Self.shortcutMap {
             KeyboardShortcuts.onKeyDown(for: name) {
@@ -31,6 +34,9 @@ final class TilingController {
                 WindowMover.apply(action)
             }
         }
+        // The monitor checks tiling.enabled / tiling.snapDrag / pause state on
+        // every drag, so it can run unconditionally from launch.
+        snapDragMonitor.start()
         Log.tiling.info("tiling started: \(Self.shortcutMap.count) shortcuts registered")
     }
 }
