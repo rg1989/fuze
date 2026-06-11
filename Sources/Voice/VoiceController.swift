@@ -23,6 +23,7 @@ final class VoiceController: ObservableObject {
     private let hud = RecordingHUD()
     private var lastRequestedModelName: String?
     private var defaultsObserver: NSObjectProtocol?
+    private var pauseObserver: NSObjectProtocol?
 
     private init() {}
 
@@ -58,6 +59,25 @@ final class VoiceController: ObservableObject {
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor in self?.prepareModel() }
+        }
+
+        // Pausing mid-recording: the key-up callback is globally disabled while
+        // paused, so it can never arrive — discard via the state machine instead
+        // of leaving the recorder running.
+        pauseObserver = NotificationCenter.default.addObserver(
+            forName: PauseManager.pauseStateChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                guard let self,
+                      PauseManager.shared.isPaused,
+                      self.session.state == .recording else { return }
+                Log.voice.info("paused mid-recording; discarding")
+                self.hud.flash("Recording discarded (Fuse paused)", hideAfter: 2.0)
+                // (recording, transcriptionFailed) → idle / .discardRecording
+                self.execute(self.session.handle(.transcriptionFailed))
+            }
         }
     }
 
