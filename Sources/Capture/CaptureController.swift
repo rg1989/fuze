@@ -38,7 +38,7 @@ final class CaptureController {
             case .selectingRegion:
                 break
             }
-            self?.refreshMenuTitle()
+            self.refreshMenuTitle()
         }
         recorder.onFinished = { [weak self] url in
             guard let self else { return }
