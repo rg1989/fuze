@@ -23,6 +23,7 @@ final class ScrollEventTapController {
     private var runLoopSource: CFRunLoopSource?
     private var permissionRetryTimer: Timer?
     private var settingsObserver: NSObjectProtocol?
+    private var pauseObserver: NSObjectProtocol?
 
     /// Snapshot read on the event-tap hot path. NEVER read UserDefaults inside
     /// the callback — the didChangeNotification observer refreshes this instead.
@@ -42,6 +43,14 @@ final class ScrollEventTapController {
             self?.settingsDidChange()
         }
 
+        pauseObserver = NotificationCenter.default.addObserver(
+            forName: PauseManager.pauseStateChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.handlePauseChange()
+        }
+
         if cachedSettings.enabled {
             installTapWhenPermitted()
         }
@@ -54,12 +63,17 @@ final class ScrollEventTapController {
             NotificationCenter.default.removeObserver(settingsObserver)
             self.settingsObserver = nil
         }
+        if let pauseObserver {
+            NotificationCenter.default.removeObserver(pauseObserver)
+            self.pauseObserver = nil
+        }
         removeTap()
     }
 
     // MARK: - Tap lifecycle
 
     private func installTapWhenPermitted() {
+        guard !PauseManager.shared.isPaused else { return }
         guard machPort == nil else { return }
         guard PermissionsService.hasAccessibility else {
             Log.scroll.info("Accessibility not granted yet; retrying scroll tap every 5 s")
@@ -116,6 +130,18 @@ final class ScrollEventTapController {
             if self.cachedSettings.enabled {
                 self.installTap()
             }
+        }
+    }
+
+    private func handlePauseChange() {
+        if PauseManager.shared.isPaused {
+            permissionRetryTimer?.invalidate()
+            permissionRetryTimer = nil
+            removeTap()
+            Log.scroll.info("scroll tap paused")
+        } else if cachedSettings.enabled {
+            Log.scroll.info("scroll tap resuming")
+            installTapWhenPermitted()
         }
     }
 
