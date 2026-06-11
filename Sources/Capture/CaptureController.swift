@@ -9,6 +9,7 @@ final class CaptureController {
     private let recorder = RecordingService()
     private let hud = RecHUD()
     private var imageEditors: [ImageEditorWindowController] = []
+    private var videoTrimmers: [VideoTrimmerWindowController] = []
 
     /// Set by AppDelegate so the title can swap with recording state.
     weak var recordingMenuItem: NSMenuItem?
@@ -129,8 +130,12 @@ final class CaptureController {
             imageEditors.append(editor)
             editor.show()
         case .recording:
-            // Replaced in Task 10.7 with the built-in trimmer.
-            NSWorkspace.shared.open(url)
+            let trimmer = VideoTrimmerWindowController(fileURL: url)
+            trimmer.onClose = { [weak self, weak trimmer] in
+                self?.videoTrimmers.removeAll { $0 === trimmer }
+            }
+            videoTrimmers.append(trimmer)
+            trimmer.show()
         }
     }
 }
