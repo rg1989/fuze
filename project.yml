@@ -1,0 +1,67 @@
+name: Fuse
+options:
+  bundleIdPrefix: com.rgv250cc
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.10"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGN_STYLE: Manual
+    DEAD_CODE_STRIPPING: YES
+packages:
+  KeyboardShortcuts:
+    url: https://github.com/sindresorhus/KeyboardShortcuts
+    from: "2.0.0"
+  WhisperKit:
+    url: https://github.com/argmaxinc/WhisperKit
+    from: "0.9.0"
+  GRDB:
+    url: https://github.com/groue/GRDB.swift
+    from: "6.27.0"
+targets:
+  Fuse:
+    type: application
+    platform: macOS
+    sources:
+      - Sources
+      - path: Resources
+        optional: true
+    dependencies:
+      - package: KeyboardShortcuts
+      - package: WhisperKit
+      - package: GRDB
+        product: GRDB
+    info:
+      path: Info.plist
+      properties:
+        CFBundleDisplayName: Fuse
+        LSUIElement: true
+        LSMinimumSystemVersion: "14.0"
+        NSMicrophoneUsageDescription: >-
+          Fuse records audio while you hold the push-to-talk shortcut and
+          transcribes it locally on this Mac. Audio never leaves the device.
+    entitlements:
+      path: Fuse.entitlements
+      properties:
+        com.apple.security.device.audio-input: true
+  FuseTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Tests
+    dependencies:
+      - target: Fuse
+schemes:
+  Fuse:
+    build:
+      targets:
+        Fuse: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - FuseTests
