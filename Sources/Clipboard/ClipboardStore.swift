@@ -109,6 +109,20 @@ final class ClipboardStore {
         _ = try dbQueue.write { db in try ClipboardItem.deleteOne(db, key: id) }
     }
 
+    /// Deletes every item carrying any of the given exact (type, data)
+    /// representations — used when a capture is discarded from the preview
+    /// window so the dead file doesn't linger in the paste picker.
+    func deleteItems(withRepresentations representations: [(type: String, data: Data)]) throws {
+        try dbQueue.write { db in
+            for rep in representations {
+                try db.execute(sql: """
+                    DELETE FROM clipboardItem WHERE id IN
+                    (SELECT itemId FROM itemRepresentation WHERE type = ? AND data = ?)
+                    """, arguments: [rep.type, rep.data])
+            }
+        }
+    }
+
     func deleteAllUnpinned() throws {
         _ = try dbQueue.write { db in try ClipboardItem.filter(Column("pinned") == false).deleteAll(db) }
     }

@@ -17,6 +17,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var captureController: CaptureController!
     private var captureRegionMenuItem: NSMenuItem!
     private var recordingMenuItem: NSMenuItem!
+    private var screenshotsFolderMenuItem: NSMenuItem!
+    private var recordingsFolderMenuItem: NSMenuItem!
     // FUSE:CONTROLLER-PROPS
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -62,6 +64,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             action: #selector(CaptureController.toggleRecordingFromMenu),
             keyEquivalent: "")
         menu.addItem(recordingMenuItem)
+        screenshotsFolderMenuItem = NSMenuItem(
+            title: "Open Screenshots Folder",
+            action: #selector(CaptureController.openScreenshotsFolderFromMenu),
+            keyEquivalent: "")
+        menu.addItem(screenshotsFolderMenuItem)
+        recordingsFolderMenuItem = NSMenuItem(
+            title: "Open Recordings Folder",
+            action: #selector(CaptureController.openRecordingsFolderFromMenu),
+            keyEquivalent: "")
+        menu.addItem(recordingsFolderMenuItem)
         // FUSE:MENU-ITEMS
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit Fuse", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
@@ -89,6 +101,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         captureController.start()
         captureRegionMenuItem.target = captureController
         recordingMenuItem.target = captureController
+        screenshotsFolderMenuItem.target = captureController
+        recordingsFolderMenuItem.target = captureController
         // FUSE:CONTROLLER-START
 
         // One-time coexistence check: if a known overlapping utility is running

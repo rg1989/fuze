@@ -29,4 +29,7 @@ extension KeyboardShortcuts.Name {
     // Capture (Phase 10)
     static let captureRegion = Self("captureRegion", default: .init(.s, modifiers: [.control, .option]))
     static let toggleRecording = Self("toggleRecording", default: .init(.r, modifiers: [.control, .option]))
+    // No defaults: folder-openers are menu items first, shortcuts opt-in.
+    static let openScreenshotsFolder = Self("openScreenshotsFolder")
+    static let openRecordingsFolder = Self("openRecordingsFolder")
 }

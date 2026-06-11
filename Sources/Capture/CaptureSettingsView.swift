@@ -3,9 +3,12 @@ import KeyboardShortcuts
 import SwiftUI
 
 struct CaptureSettingsView: View {
-    @AppStorage("capture.saveFolderPath") private var saveFolderPath = CaptureController.defaultSaveFolder
+    @AppStorage("capture.screenshotFolderPath") private var screenshotFolderPath =
+        CaptureController.defaultScreenshotFolder
+    @AppStorage("capture.recordingFolderPath") private var recordingFolderPath =
+        CaptureController.defaultRecordingFolder
     @AppStorage("capture.copyToClipboard") private var copyToClipboard = true
-    @AppStorage("capture.openEditorAfter") private var openEditorAfter = true
+    @AppStorage("capture.showPreviewAfter") private var showPreviewAfter = true
     @AppStorage("capture.imageFormat") private var imageFormat = "png"
     @AppStorage("capture.videoFormat") private var videoFormat = "mp4"
 
@@ -37,20 +40,12 @@ struct CaptureSettingsView: View {
             Section("Shortcuts") {
                 KeyboardShortcuts.Recorder("Capture region:", name: .captureRegion)
                 KeyboardShortcuts.Recorder("Start/stop recording:", name: .toggleRecording)
+                KeyboardShortcuts.Recorder("Open screenshots folder:", name: .openScreenshotsFolder)
+                KeyboardShortcuts.Recorder("Open recordings folder:", name: .openRecordingsFolder)
             }
-            Section("Output") {
-                HStack {
-                    VStack(alignment: .leading) {
-                        Text("Save to folder")
-                        Text(saveFolderPath)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                    }
-                    Spacer()
-                    Button("Choose…") { chooseFolder() }
-                }
+            Section {
+                folderRow(title: "Screenshots folder", path: $screenshotFolderPath)
+                folderRow(title: "Recordings folder", path: $recordingFolderPath)
                 Picker("Screenshot format", selection: $imageFormat) {
                     Text("PNG").tag("png")
                     Text("JPEG").tag("jpg")
@@ -60,7 +55,13 @@ struct CaptureSettingsView: View {
                     Text("MOV").tag("mov")
                 }
                 Toggle("Copy capture to clipboard", isOn: $copyToClipboard)
-                Toggle("Open editor after capture", isOn: $openEditorAfter)
+                Toggle("Show preview after capture", isOn: $showPreviewAfter)
+            } header: {
+                Text("Output")
+            } footer: {
+                Text("The preview offers Keep (Return) and Delete (Esc). Delete moves the file to the Trash and removes it from the clipboard.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             Section {
                 Text("Copied captures land in Fuse's clipboard history automatically — every screenshot and recording shows up in the paste picker (⇧⌘V).")
@@ -75,14 +76,29 @@ struct CaptureSettingsView: View {
         }
     }
 
-    private func chooseFolder() {
+    private func folderRow(title: String, path: Binding<String>) -> some View {
+        HStack {
+            VStack(alignment: .leading) {
+                Text(title)
+                Text(path.wrappedValue)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            Spacer()
+            Button("Choose…") { chooseFolder(into: path) }
+        }
+    }
+
+    private func chooseFolder(into path: Binding<String>) {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.canCreateDirectories = true
-        panel.directoryURL = URL(fileURLWithPath: saveFolderPath)
+        panel.directoryURL = URL(fileURLWithPath: path.wrappedValue)
         if panel.runModal() == .OK, let url = panel.url {
-            saveFolderPath = url.path
+            path.wrappedValue = url.path
         }
     }
 }
