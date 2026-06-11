@@ -44,8 +44,8 @@ struct RecHUDView: View {
             case .armed:
                 RecPulseDot(hollow: true)
                 Text("Ready to record")
-                    .font(FuseTheme.hudFont(size: 14))
-                    .foregroundStyle(FuseTheme.ink.opacity(0.92))
+                    .font(FuseTheme.hudFont(size: 13.5, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.92))
                 Button { model.onStart?() } label: {
                     Label("Start", systemImage: "record.circle.fill")
                         .font(.system(size: 13, weight: .semibold))
@@ -58,13 +58,13 @@ struct RecHUDView: View {
                 Button("Cancel") { model.onCancel?() }
                     .buttonStyle(.bordered)
                     .controlSize(.large)
-                    .tint(FuseTheme.ink)
+                    .tint(.white)
             case .recording:
                 RecPulseDot()
                 Text(model.elapsedText)
                     .font(FuseTheme.hudFont(size: 14, weight: .semibold, italic: false))
                     .monospacedDigit()
-                    .foregroundStyle(FuseTheme.ink.opacity(0.92))
+                    .foregroundStyle(.white.opacity(0.92))
                 Button { model.onStop?() } label: {
                     Label("Stop", systemImage: "stop.fill")
                         .font(.system(size: 12, weight: .semibold))

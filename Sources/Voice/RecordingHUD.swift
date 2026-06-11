@@ -91,12 +91,12 @@ struct RecordingHUDView: View {
             case .recording:
                 GlowOrb()
                 EqualizerBars()
-                ShimmerText(text: "Recording",
-                            base: FuseTheme.recordingRed,
+                ShimmerText(text: "RECORDING",
+                            base: FuseTheme.recordingRedBright,
                             highlight: FuseTheme.recordingRedShine)
             case .transcribing:
                 TranscribeRing()
-                ShimmerText(text: "Transcribing…",
+                ShimmerText(text: "TRANSCRIBING",
                             base: FuseTheme.transcribeOrange,
                             highlight: FuseTheme.transcribeOrangeShine)
             case .message(let text):
@@ -105,15 +105,15 @@ struct RecordingHUDView: View {
                     .foregroundStyle(FuseTheme.transcribeOrange)
                     .shadow(color: FuseTheme.transcribeOrange.opacity(0.4), radius: 5)
                 Text(text)
-                    .foregroundStyle(FuseTheme.ink.opacity(0.92))
+                    .font(FuseTheme.hudFont(size: 13, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.92))
                     .lineLimit(2)
                     .frame(maxWidth: 320, alignment: .leading)
                     .fixedSize(horizontal: true, vertical: false)
             }
         }
-        .font(FuseTheme.hudFont(size: 14))
         .padding(.horizontal, 19)
-        .padding(.vertical, 12)
+        .padding(.vertical, 13)
         .hudPillChrome()
         .padding(24)   // room for the shadow inside the borderless panel
     }
