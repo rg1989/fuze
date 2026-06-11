@@ -10,41 +10,90 @@ final class RecHUDModel: ObservableObject {
     var onStop: (() -> Void)?
 }
 
+/// Red recording dot with a soft pulsing glow.
+private struct RecPulseDot: View {
+    var hollow = false
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1 / 30)) { context in
+            let t = context.date.timeIntervalSinceReferenceDate
+            let pulse = 0.5 + 0.5 * sin(t * 3.2)
+            let gradient = LinearGradient(
+                colors: [Color(red: 1.0, green: 0.32, blue: 0.30),
+                         Color(red: 0.82, green: 0.05, blue: 0.18)],
+                startPoint: .top, endPoint: .bottom)
+            Group {
+                if hollow {
+                    Circle().strokeBorder(gradient, lineWidth: 2.5)
+                } else {
+                    Circle().fill(gradient)
+                }
+            }
+            .frame(width: 12, height: 12)
+            .shadow(color: .red.opacity(0.45 + 0.35 * pulse), radius: 5 + 3 * pulse)
+        }
+    }
+}
+
 struct RecHUDView: View {
     @ObservedObject var model: RecHUDModel
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 12) {
             switch model.mode {
             case .armed:
-                Circle()
-                    .strokeBorder(.red, lineWidth: 2)
-                    .frame(width: 10, height: 10)
-                Text("Ready")
-                Button("● Start") { model.onStart?() }
-                    .tint(.red)
+                RecPulseDot(hollow: true)
+                Text("Ready to record")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.92))
+                Button { model.onStart?() } label: {
+                    Label("Start", systemImage: "record.circle.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .padding(.horizontal, 4)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Color(red: 0.85, green: 0.10, blue: 0.20))
+                .controlSize(.large)
+                .keyboardShortcut(.defaultAction)
                 Button("Cancel") { model.onCancel?() }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                    .tint(.white)
             case .recording:
-                Circle()
-                    .fill(.red)
-                    .frame(width: 10, height: 10)
+                RecPulseDot()
                 Text(model.elapsedText)
-                    .font(.system(.body, design: .monospaced))
-                Button("Stop") { model.onStop?() }
+                    .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.92))
+                Button { model.onStop?() } label: {
+                    Label("Stop", systemImage: "stop.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Color(red: 0.85, green: 0.10, blue: 0.20))
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 12)
         .background(.ultraThinMaterial, in: Capsule())
+        .background(Color.black.opacity(0.45), in: Capsule())
+        .overlay(
+            Capsule().strokeBorder(
+                LinearGradient(colors: [.white.opacity(0.35), .white.opacity(0.06)],
+                               startPoint: .top, endPoint: .bottom),
+                lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.35), radius: 16, y: 6)
+        .padding(20)   // room for the shadow inside the borderless panel
     }
 }
 
-/// Small floating REC indicator shown while a recording runs: red dot,
-/// elapsed timer, Stop button. Non-activating panel pinned to the top-right
-/// of the main screen (usually outside the recorded region — see gotchas).
+/// Floating REC controls. Armed: Ready/Start/Cancel centered in the middle of
+/// the selection. Recording: red dot, elapsed timer, Stop button — kept just
+/// OUTSIDE the selection so the controls never appear in the captured video.
 final class RecHUD {
     private let model = RecHUDModel()
     private var panel: NSPanel?
+    private var hosting: NSHostingView<RecHUDView>?
     private var timer: Timer?
     private var startedAt: Date?
 
@@ -61,15 +110,18 @@ final class RecHUD {
         set { model.onCancel = newValue }
     }
 
-    /// Where to place the HUD panel (Cocoa coords). Armed: inside the
-    /// selection, just above its lower border, centered. Recording: just
-    /// BELOW the selection (outside the captured region — the HUD must not
-    /// appear in the video), falling back to above the top edge, then inside.
+    /// Where to place the HUD panel (Cocoa coords). Armed: dead-center of the
+    /// selection, clamped to the visible frame. Recording: just BELOW the
+    /// selection (outside the captured region — the HUD must not appear in the
+    /// video), falling back to above the top edge, then inside.
     /// nil region = full screen: bottom-center of the visible frame.
     static func hudOrigin(mode: RecHUDModel.Mode, region: CGRect?,
                           panelSize: CGSize, screenVisible: CGRect) -> CGPoint {
         func clampX(_ x: CGFloat) -> CGFloat {
             min(max(x, screenVisible.minX + 8), screenVisible.maxX - panelSize.width - 8)
+        }
+        func clampY(_ y: CGFloat) -> CGFloat {
+            min(max(y, screenVisible.minY + 8), screenVisible.maxY - panelSize.height - 8)
         }
         guard let region else {
             return CGPoint(x: clampX(screenVisible.midX - panelSize.width / 2),
@@ -78,7 +130,7 @@ final class RecHUD {
         let x = clampX(region.midX - panelSize.width / 2)
         switch mode {
         case .armed:
-            return CGPoint(x: x, y: max(region.minY + 12, screenVisible.minY + 8))
+            return CGPoint(x: x, y: clampY(region.midY - panelSize.height / 2))
         case .recording:
             let below = region.minY - panelSize.height - 8
             if below >= screenVisible.minY { return CGPoint(x: x, y: below) }
@@ -117,17 +169,25 @@ final class RecHUD {
     private func presentPanel() {
         if panel == nil {
             let panel = NSPanel(
-                contentRect: NSRect(x: 0, y: 0, width: 240, height: 44),
+                contentRect: NSRect(x: 0, y: 0, width: 320, height: 80),
                 styleMask: [.borderless, .nonactivatingPanel],
                 backing: .buffered,
                 defer: false)
             panel.level = .screenSaver
             panel.isOpaque = false
             panel.backgroundColor = .clear
+            panel.hasShadow = false
             panel.isReleasedWhenClosed = false
             panel.hidesOnDeactivate = false
-            panel.contentView = NSHostingView(rootView: RecHUDView(model: model))
+            let hosting = NSHostingView(rootView: RecHUDView(model: model))
+            panel.contentView = hosting
+            self.hosting = hosting
             self.panel = panel
+        }
+        // Mode switches change the content size (armed has two buttons);
+        // resize before computing the origin so centering uses real bounds.
+        if let panel, let hosting {
+            panel.setContentSize(hosting.fittingSize)
         }
         let screen = region.flatMap { r in
             NSScreen.screens.first { $0.frame.intersects(r) }
