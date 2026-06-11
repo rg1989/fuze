@@ -2,7 +2,7 @@ import CoreGraphics
 import Foundation
 
 enum AnnotationTool: String, CaseIterable, Identifiable {
-    case arrow, rectangle, ellipse, freehand, highlighter, text
+    case arrow, rectangle, ellipse, freehand, highlighter, text, pixelate
 
     var id: String { rawValue }
 
@@ -14,6 +14,7 @@ enum AnnotationTool: String, CaseIterable, Identifiable {
         case .freehand: return "scribble"
         case .highlighter: return "highlighter"
         case .text: return "textformat"
+        case .pixelate: return "squareshape.split.3x3"
         }
     }
 }
@@ -85,8 +86,8 @@ enum AnnotationPaths {
             for p in a.points.dropFirst() {
                 path.addLine(to: p)
             }
-        case .text:
-            break   // drawn as a string by each renderer
+        case .text, .pixelate:
+            break   // text is drawn as a string; pixelate is baked into the image
         }
         return path
     }

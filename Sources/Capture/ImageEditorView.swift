@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import CoreImage.CIFilterBuiltins
 import UniformTypeIdentifiers
 
 extension AnnotationColor {
@@ -26,6 +27,7 @@ final class ImageEditorState: ObservableObject {
     @Published var cropMode = false
     @Published var cropRect: CGRect?
     @Published var pendingText: CGPoint?
+    @Published var pixelatePreview: CGRect?
     @Published var textDraft = ""
 
     let fileURL: URL
@@ -45,6 +47,8 @@ final class ImageEditorState: ObservableObject {
         switch tool {
         case .text:
             break   // text places on dragEnded (a click)
+        case .pixelate:
+            pixelatePreview = CaptureGeometry.normalizedRect(from: start, to: current)
         case .arrow:
             var a = inProgress ?? newAnnotation()
             a.points = [start, current]
@@ -66,6 +70,12 @@ final class ImageEditorState: ObservableObject {
         if tool == .text {
             pendingText = end
             textDraft = ""
+            return
+        }
+        if tool == .pixelate {
+            let region = CaptureGeometry.normalizedRect(from: start, to: end)
+            pixelatePreview = nil
+            applyPixelate(in: region)
             return
         }
         dragChanged(start: start, current: end)
@@ -162,6 +172,32 @@ final class ImageEditorState: ObservableObject {
         inProgress = nil
         self.cropRect = nil
         cropMode = false
+    }
+
+    /// Bake a pixelated version of `rect` (image points, top-left origin)
+    /// into the base image. Destructive — not undoable, like crop.
+    func applyPixelate(in rect: CGRect) {
+        guard rect.width >= 2, rect.height >= 2,
+              let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil)
+        else { return }
+        let scaleX = CGFloat(cg.width) / image.size.width
+        let scaleY = CGFloat(cg.height) / image.size.height
+        let ci = CIImage(cgImage: cg)
+        let filter = CIFilter.pixellate()
+        filter.inputImage = ci
+        filter.scale = Float(16 * max(scaleX, 1))
+        filter.center = CGPoint(x: ci.extent.midX, y: ci.extent.midY)
+        guard let pixelated = filter.outputImage else { return }
+        // CoreImage is BOTTOM-LEFT origin; our rect is top-left — flip Y.
+        let pixelRect = CGRect(
+            x: rect.minX * scaleX,
+            y: CGFloat(cg.height) - rect.maxY * scaleY,
+            width: rect.width * scaleX,
+            height: rect.height * scaleY)
+        let composited = pixelated.cropped(to: pixelRect).composited(over: ci)
+        let context = CIContext()
+        guard let outCG = context.createCGImage(composited, from: ci.extent) else { return }
+        image = NSImage(cgImage: outCG, size: image.size)
     }
 
     static func pngData(of image: NSImage) -> Data? {
@@ -281,6 +317,10 @@ struct ImageEditorView: View {
                 if let a = state.inProgress { draw(a, in: &context) }
                 if state.cropMode, let crop = state.cropRect {
                     context.stroke(Path(crop), with: .color(.white),
+                                   style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                }
+                if let preview = state.pixelatePreview {
+                    context.stroke(Path(preview), with: .color(.gray),
                                    style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
                 }
             }
