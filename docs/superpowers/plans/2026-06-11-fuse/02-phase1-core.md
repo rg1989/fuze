@@ -15,7 +15,7 @@
 **Files:**
 - Create: `Sources/Core/Log.swift`
 
-- [ ] **Step 1: Write `Sources/Core/Log.swift`**
+- [x] **Step 1: Write `Sources/Core/Log.swift`**
 
 ```swift
 import os
@@ -31,7 +31,7 @@ enum Log {
 }
 ```
 
-- [ ] **Step 2: Regenerate, build, commit**
+- [x] **Step 2: Regenerate, build, commit**
 
 ```bash
 xcodegen generate
@@ -52,7 +52,7 @@ Tip for all later phases: stream a feature's logs while testing with
 - Create: `Sources/Core/PasteService.swift`
 - Test: `Tests/FuseTests/PasteServiceTests.swift`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```swift
 import XCTest
@@ -121,7 +121,7 @@ final class PasteServiceTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 xcodegen generate
@@ -129,7 +129,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 ```
 Expected: **BUILD FAILS** with `cannot find 'PasteService' in scope` (a compile failure is this step's "red").
 
-- [ ] **Step 3: Write `Sources/Core/PasteService.swift`**
+- [x] **Step 3: Write `Sources/Core/PasteService.swift`**
 
 ```swift
 import AppKit
@@ -201,14 +201,14 @@ enum PasteService {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&1 | tail -10
 ```
 Expected: `** TEST SUCCEEDED **`, 6 tests passed (1 sanity + 5 new).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/Core/PasteService.swift Tests/FuseTests/PasteServiceTests.swift
@@ -223,7 +223,7 @@ git commit -m "feat(core): PasteService with snapshot/write/restore and Cmd+V sy
 - Create: `Sources/Core/Permissions.swift`
 - Test: `Tests/FuseTests/PermissionsTests.swift`
 
-- [ ] **Step 1: Write the (smoke) test** — permission state can't be granted in CI, but the calls must not crash and must return stable types.
+- [x] **Step 1: Write the (smoke) test** — permission state can't be granted in CI, but the calls must not crash and must return stable types.
 
 ```swift
 import XCTest
@@ -243,7 +243,7 @@ final class PermissionsTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify failure**
+- [x] **Step 2: Run tests to verify failure**
 
 ```bash
 xcodegen generate
@@ -251,7 +251,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 ```
 Expected: compile failure, `cannot find 'PermissionsService' in scope`.
 
-- [ ] **Step 3: Write `Sources/Core/Permissions.swift`**
+- [x] **Step 3: Write `Sources/Core/Permissions.swift`**
 
 ```swift
 import ApplicationServices
@@ -318,14 +318,14 @@ enum PermissionsService {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&1 | tail -10
 ```
 Expected: `** TEST SUCCEEDED **`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/Core/Permissions.swift Tests/FuseTests/PermissionsTests.swift
@@ -340,7 +340,7 @@ git commit -m "feat(core): PermissionsService for accessibility, input monitorin
 - Create: `Sources/Core/AX.swift`
 - Test: `Tests/FuseTests/AXElementTests.swift`
 
-- [ ] **Step 1: Write the smoke test** (real AX values need GUI permission; we test construction and nil-safety)
+- [x] **Step 1: Write the smoke test** (real AX values need GUI permission; we test construction and nil-safety)
 
 ```swift
 import XCTest
@@ -357,7 +357,7 @@ final class AXElementTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify failure**
+- [x] **Step 2: Run tests to verify failure**
 
 ```bash
 xcodegen generate
@@ -365,7 +365,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 ```
 Expected: compile failure, `cannot find 'AXElement' in scope`.
 
-- [ ] **Step 3: Write `Sources/Core/AX.swift`**
+- [x] **Step 3: Write `Sources/Core/AX.swift`**
 
 ```swift
 import ApplicationServices
@@ -462,14 +462,14 @@ struct AXElement {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&1 | tail -10
 ```
 Expected: `** TEST SUCCEEDED **`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/Core/AX.swift Tests/FuseTests/AXElementTests.swift
@@ -484,7 +484,7 @@ git commit -m "feat(core): AXElement wrapper over AXUIElement"
 - Create: `Sources/Core/HotkeyNames.swift`
 - Test: `Tests/FuseTests/HotkeyNamesTests.swift`
 
-- [ ] **Step 1: Write the test**
+- [x] **Step 1: Write the test**
 
 ```swift
 import XCTest
@@ -507,7 +507,7 @@ final class HotkeyNamesTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify failure**
+- [x] **Step 2: Run tests to verify failure**
 
 ```bash
 xcodegen generate
@@ -515,7 +515,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 ```
 Expected: compile failure on the missing `KeyboardShortcuts.Name` extensions.
 
-- [ ] **Step 3: Write `Sources/Core/HotkeyNames.swift`** (the §6.3 master table, in code — the ONLY place hotkey defaults exist)
+- [x] **Step 3: Write `Sources/Core/HotkeyNames.swift`** (the §6.3 master table, in code — the ONLY place hotkey defaults exist)
 
 ```swift
 import KeyboardShortcuts
@@ -548,14 +548,14 @@ extension KeyboardShortcuts.Name {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&1 | tail -10
 ```
 Expected: `** TEST SUCCEEDED **`. (If `defaultShortcut` isn't the property name in the pinned KeyboardShortcuts version, check the package source under `.build/SourcePackages/checkouts/KeyboardShortcuts/Sources/` for the current accessor and adjust the test only.)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/Core/HotkeyNames.swift Tests/FuseTests/HotkeyNamesTests.swift
@@ -569,7 +569,7 @@ git commit -m "feat(core): central hotkey registry with defaults"
 **Files:**
 - Modify: `Sources/App/GeneralSettingsView.swift` (replace entire file)
 
-- [ ] **Step 1: Replace `Sources/App/GeneralSettingsView.swift`**
+- [x] **Step 1: Replace `Sources/App/GeneralSettingsView.swift`**
 
 ```swift
 import ServiceManagement
@@ -657,7 +657,7 @@ struct GeneralSettingsView: View {
 }
 ```
 
-- [ ] **Step 2: Build and run tests**
+- [x] **Step 2: Build and run tests**
 
 ```bash
 xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&1 | tail -10
@@ -671,7 +671,7 @@ pkill -x Fuse; open .build/Build/Products/Debug/Fuse.app
 ```
 Ask the human to: open Settings → General, click "Grant…" next to Accessibility, add/enable Fuse in System Settings, and confirm the row flips to a green checkmark within ~2 seconds. Also toggle "Launch Fuse at login" on and off without errors.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add Sources/App/GeneralSettingsView.swift
@@ -689,7 +689,7 @@ One menu click silences ALL of Fuse: every KeyboardShortcuts hotkey is disabled 
 - Modify: `Sources/App/AppDelegate.swift` (menu item + handler)
 - Test: `Tests/FuseTests/PauseManagerTests.swift`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```swift
 import XCTest
@@ -733,7 +733,7 @@ final class PauseManagerTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify failure**
+- [x] **Step 2: Run tests to verify failure**
 
 ```bash
 xcodegen generate
@@ -741,7 +741,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 ```
 Expected: compile failure, `cannot find 'PauseManager' in scope`.
 
-- [ ] **Step 3: Write `Sources/Core/PauseManager.swift`**
+- [x] **Step 3: Write `Sources/Core/PauseManager.swift`**
 
 ```swift
 import Foundation
@@ -773,14 +773,14 @@ final class PauseManager {
 
 API drift note: `KeyboardShortcuts.isEnabled` is the package's global on/off switch. If the resolved version lacks it, check the checkout (`grep -rn "isEnabled" .build/SourcePackages/checkouts/KeyboardShortcuts/Sources/ | head`) and fall back to `KeyboardShortcuts.disable(...)` / `.enable(...)` with the full name list from `HotkeyNames.swift`; record under `## Deviations`.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&1 | tail -10
 ```
 Expected: `** TEST SUCCEEDED **`.
 
-- [ ] **Step 5: Add the menu item in `Sources/App/AppDelegate.swift`**
+- [x] **Step 5: Add the menu item in `Sources/App/AppDelegate.swift`**
 
 Replace this block inside `applicationDidFinishLaunching` (keep the `// FUSE:MENU-ITEMS` anchor verbatim):
 
@@ -814,7 +814,7 @@ Then add this method to `AppDelegate`, directly below `openSettings()`:
     }
 ```
 
-- [ ] **Step 6: Build and test**
+- [x] **Step 6: Build and test**
 
 ```bash
 xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&1 | tail -10
@@ -828,7 +828,7 @@ pkill -x Fuse; open .build/Build/Products/Debug/Fuse.app
 ```
 Ask the human to confirm: clicking "Pause Fuse" puts a checkmark on the item, renames it "Paused — click to resume", and dims the menu-bar icon; clicking again restores all three. (Hotkey silencing becomes observable once feature phases land — at this point in the build there are no hotkey features yet, and that is fine.)
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add Sources/Core/PauseManager.swift Sources/App/AppDelegate.swift Tests/FuseTests/PauseManagerTests.swift
@@ -847,7 +847,7 @@ Fuse replaces apps the user likely still has running. Overlaps actively misbehav
 - Modify: `Sources/App/AppDelegate.swift` (first-launch hook)
 - Test: `Tests/FuseTests/ConflictDetectorTests.swift`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```swift
 import XCTest
@@ -877,7 +877,7 @@ final class ConflictDetectorTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify failure**
+- [x] **Step 2: Run tests to verify failure**
 
 ```bash
 xcodegen generate
@@ -885,7 +885,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 ```
 Expected: compile failure, `cannot find 'ConflictDetector' in scope`.
 
-- [ ] **Step 3: Write `Sources/Core/ConflictDetector.swift`**
+- [x] **Step 3: Write `Sources/Core/ConflictDetector.swift`**
 
 ```swift
 import AppKit
@@ -939,14 +939,14 @@ enum ConflictDetector {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&1 | tail -10
 ```
 Expected: `** TEST SUCCEEDED **`.
 
-- [ ] **Step 5: Replace `Sources/App/GeneralSettingsView.swift`** (Task 1.6's version plus the conflicts banner — full file):
+- [x] **Step 5: Replace `Sources/App/GeneralSettingsView.swift`** (Task 1.6's version plus the conflicts banner — full file):
 
 ```swift
 import ServiceManagement
@@ -1050,7 +1050,7 @@ struct GeneralSettingsView: View {
 }
 ```
 
-- [ ] **Step 6: First-launch hook in `Sources/App/AppDelegate.swift`.** Core code may live BELOW the `// FUSE:CONTROLLER-START` anchor (features insert above it, so controllers will start before this check). Replace:
+- [x] **Step 6: First-launch hook in `Sources/App/AppDelegate.swift`.** Core code may live BELOW the `// FUSE:CONTROLLER-START` anchor (features insert above it, so controllers will start before this check). Replace:
 
 ```swift
         // FUSE:CONTROLLER-START
@@ -1074,7 +1074,7 @@ with:
     }
 ```
 
-- [ ] **Step 7: Build and test**
+- [x] **Step 7: Build and test**
 
 ```bash
 xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&1 | tail -10
@@ -1089,7 +1089,7 @@ pkill -x Fuse; open .build/Build/Products/Debug/Fuse.app
 ```
 Ask the human: if any known utility (Rectangle, Scroll Reverser, Maccy, …) is running, Settings opens by itself and General shows the yellow banner naming it with advice; quitting that utility clears the banner within ~2 s. If none of the known apps is installed, temporarily add `"com.apple.TextEdit": ("TextEdit", "Test", "Temporary test entry — remove.")` to `knownConflicts`, rebuild, open TextEdit, verify, then REVERT the entry and rebuild.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add Sources/Core/ConflictDetector.swift Sources/App/GeneralSettingsView.swift Sources/App/AppDelegate.swift Tests/FuseTests/ConflictDetectorTests.swift
@@ -1104,11 +1104,15 @@ git commit -m "feat(core): conflict detection for overlapping utilities with Gen
 - [ ] **HUMAN-VERIFY** Microphone "Grant…" triggers the system prompt (can defer actual grant to Phase 5).
 - [ ] **HUMAN-VERIFY** "Pause Fuse" toggles the checkmark, renames itself, and dims the menu-bar icon (Task 1.7).
 - [ ] **HUMAN-VERIFY** Conflict banner lists running known utilities and clears when they quit (Task 1.8).
-- [ ] All unit tests green: `xcodebuild ... test` → `** TEST SUCCEEDED **`.
-- [ ] `git log --oneline | head -12` shows the eight Phase 1 commits on top.
+- [x] All unit tests green: `xcodebuild ... test` → `** TEST SUCCEEDED **`.
+- [x] `git log --oneline | head -12` shows the eight Phase 1 commits on top.
 
 ## Risks & gotchas
 
 - **TCC + ad-hoc signing:** after rebuilds, macOS may show Accessibility as granted while `AXIsProcessTrusted()` returns false. Remove Fuse from the list and re-add the current `.build/.../Fuse.app`. (Master plan §10 — this WILL happen during development.)
 - `SMAppService.mainApp.register()` can throw when the app runs from a path macOS dislikes (e.g. a translocated copy); running from `.build/Build/Products/Debug/` is fine.
 - `kAXTrustedCheckOptionPrompt` must go through `.takeUnretainedValue()` — passing the raw `Unmanaged` constant into the dictionary compiles but never prompts.
+
+## Deviations
+
+None — all library APIs (KeyboardShortcuts `defaultShortcut`, `Key` names, `isEnabled` global) matched the plan as written; verified against the checkout under `.build/SourcePackages/checkouts/KeyboardShortcuts/`.
