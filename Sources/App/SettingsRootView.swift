@@ -13,6 +13,8 @@ struct SettingsRootView: View {
                 .tabItem { Label("Clipboard", systemImage: "doc.on.clipboard") }
             VoiceSettingsView()
                 .tabItem { Label("Voice", systemImage: "mic") }
+            DownloaderSettingsView()
+                .tabItem { Label("Downloads", systemImage: "arrow.down.circle") }
             // FUSE:SETTINGS_TABS
         }
         .frame(minWidth: 620, minHeight: 520)
