@@ -80,6 +80,7 @@ final class PasteboardWatcher {
 
     func start() {
         guard timer == nil else { return }
+        UserDefaults.standard.register(defaults: ["clipboard.copySound": true])
         lastChangeCount = pasteboard.changeCount   // never capture pre-existing content
         let t = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
             self?.poll()
@@ -163,6 +164,9 @@ final class PasteboardWatcher {
                            representations: representations)
             let configured = UserDefaults.standard.integer(forKey: "clipboard.maxItems")
             try store.prune(keeping: configured > 0 ? configured : 500)
+            if UserDefaults.standard.bool(forKey: "clipboard.copySound") {
+                NSSound(named: "Tink")?.play()
+            }
             Log.clipboard.debug("captured \(kind, privacy: .public) item")
         } catch {
             Log.clipboard.error("capture failed: \(error.localizedDescription)")

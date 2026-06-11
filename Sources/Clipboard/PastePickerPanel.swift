@@ -9,19 +9,20 @@ final class PastePickerPanel: NSPanel {
     override var canBecomeKey: Bool { true }
 
     init() {
+        // Borderless: a .titled mask leaves an empty title-bar strip above the
+        // content even with a transparent/hidden title. The SwiftUI content
+        // paints its own rounded material card; the panel itself is clear.
         super.init(contentRect: NSRect(x: 0, y: 0, width: 460, height: 520),
-                   styleMask: [.nonactivatingPanel, .titled, .fullSizeContentView],
+                   styleMask: [.nonactivatingPanel, .borderless],
                    backing: .buffered, defer: false)
-        titlebarAppearsTransparent = true
-        titleVisibility = .hidden
+        isOpaque = false
+        backgroundColor = .clear
+        hasShadow = true
         isMovableByWindowBackground = true
         level = .floating
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         isReleasedWhenClosed = false
         hidesOnDeactivate = false
-        standardWindowButton(.closeButton)?.isHidden = true
-        standardWindowButton(.miniaturizeButton)?.isHidden = true
-        standardWindowButton(.zoomButton)?.isHidden = true
     }
 
     override func resignKey() {

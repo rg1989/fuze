@@ -18,6 +18,7 @@ final class VoiceController: ObservableObject {
     @Published private(set) var modelStatus: ModelStatus = .notLoaded
 
     private var session = VoiceSession()
+    private var transcriptionGeneration = 0
     private let recorder = AudioRecorder()
     private let transcriber = Transcriber()
     private let hud = RecordingHUD()
@@ -41,22 +42,23 @@ final class VoiceController: ObservableObject {
             "voice.modelName": "openai_whisper-base.en",
             "voice.language": "en",
             "voice.removeFillers": true,
+            "voice.activationMode": "hold",
             ModifierHoldMonitor.defaultsKey: 0,
         ])
 
         KeyboardShortcuts.onKeyDown(for: .pushToTalk) { [weak self] in
-            Task { @MainActor in self?.hotkeyDown() }
+            Task { @MainActor in self?.triggerDown() }
         }
         KeyboardShortcuts.onKeyUp(for: .pushToTalk) { [weak self] in
-            Task { @MainActor in self?.hotkeyUp() }
+            Task { @MainActor in self?.triggerUp() }
         }
 
         // Modifier-hold push-to-talk (e.g. Right ⌘ + Right ⌥): KeyboardShortcuts
         // can't record modifier-only combos, so a flagsChanged monitor feeds the
         // same session pipeline. Off until the user records a combo in settings.
         let monitor = ModifierHoldMonitor(
-            onDown: { [weak self] in self?.hotkeyDown() },
-            onUp: { [weak self] in self?.hotkeyUp() })
+            onDown: { [weak self] in self?.triggerDown() },
+            onUp: { [weak self] in self?.triggerUp() })
         monitor.start()
         modifierMonitor = monitor
 
@@ -93,22 +95,27 @@ final class VoiceController: ObservableObject {
         }
     }
 
-    // MARK: - Hotkey handling
+    // MARK: - Trigger handling (hold or toggle mode, see ActivationMapper)
 
-    private func hotkeyDown() {
-        guard PermissionsService.microphoneStatus == .authorized else {
-            Log.voice.info("hotkey down without mic permission; requesting")
-            PermissionsService.requestMicrophone { granted in
-                Log.voice.info("microphone request resolved: \(granted)")
+    private func triggerDown() {
+        guard let event = ActivationMapper.event(forDownIn: session.state,
+                                                 mode: ActivationMode.current()) else { return }
+        if event == .hotkeyDown {
+            guard PermissionsService.microphoneStatus == .authorized else {
+                Log.voice.info("trigger down without mic permission; requesting")
+                PermissionsService.requestMicrophone { granted in
+                    Log.voice.info("microphone request resolved: \(granted)")
+                }
+                hud.flash("Microphone permission needed", hideAfter: 2.0)
+                return // abort this attempt; the session never leaves .idle
             }
-            hud.flash("Microphone permission needed", hideAfter: 2.0)
-            return // abort this attempt; the session never leaves .idle
         }
-        execute(session.handle(.hotkeyDown))
+        execute(session.handle(event))
     }
 
-    private func hotkeyUp() {
-        execute(session.handle(.hotkeyUp))
+    private func triggerUp() {
+        guard let event = ActivationMapper.event(forUpIn: ActivationMode.current()) else { return }
+        execute(session.handle(event))
     }
 
     private func execute(_ command: VoiceCommand) {
@@ -153,22 +160,44 @@ final class VoiceController: ObservableObject {
         if case .ready(let loaded) = modelStatus, loaded == modelName {
             hud.show(.transcribing)
         } else {
-            hud.show(.message("Downloading model…"))
+            hud.show(.message("Preparing model — first use can take minutes…"))
         }
+
+        // Generation token: the watchdog can orphan a hung worker, and a stale
+        // worker finishing late must not paste into a newer session.
+        transcriptionGeneration += 1
+        let generation = transcriptionGeneration
 
         Task { [weak self] in
             guard let self else { return }
             do {
                 try await self.transcriber.prepare(modelName: modelName)
+                guard generation == self.transcriptionGeneration else { return }
                 self.hud.show(.transcribing)
                 let raw = try await self.transcriber.transcribe(samples: samples, language: language)
+                guard generation == self.transcriptionGeneration else { return }
                 Log.voice.info("transcribed \(samples.count) samples -> \(raw.count) chars")
                 self.deliver(raw: raw)
             } catch {
+                guard generation == self.transcriptionGeneration else { return }
                 Log.voice.error("transcription failed: \(String(describing: error))")
                 self.hud.flash("Transcription failed", hideAfter: 2.0)
                 self.execute(self.session.handle(.transcriptionFailed))
             }
+        }
+
+        // Watchdog: large models can hang (or spend many minutes on first-run
+        // CoreML compilation). After 5 minutes, free the session so the user
+        // isn't stuck in .transcribing forever; the orphaned worker is ignored.
+        Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 300 * 1_000_000_000)
+            guard let self,
+                  generation == self.transcriptionGeneration,
+                  self.session.state == .transcribing else { return }
+            self.transcriptionGeneration += 1
+            Log.voice.error("transcription watchdog fired after 300 s (model: \(modelName, privacy: .public))")
+            self.hud.flash("Transcription timed out — try a smaller model", hideAfter: 3.0)
+            self.execute(self.session.handle(.transcriptionFailed))
         }
     }
 

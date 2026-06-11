@@ -123,6 +123,7 @@ struct PastePickerView: View {
                         }
                     }
                     .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
                     .onChange(of: model.selectedIndex) { _, newIndex in proxy.scrollTo(newIndex) }
                 }
             }
@@ -131,6 +132,10 @@ struct PastePickerView: View {
                 .font(.caption).foregroundStyle(.secondary).padding(6)
         }
         .frame(width: 460, height: 520)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14)
+            .strokeBorder(Color.primary.opacity(0.12), lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
         .onAppear { searchFocused = true }
         .onChange(of: model.focusRequest) { _, _ in searchFocused = true }
     }

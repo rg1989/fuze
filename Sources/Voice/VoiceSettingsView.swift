@@ -6,6 +6,7 @@ struct VoiceSettingsView: View {
     @AppStorage("voice.modelName") private var modelName = "openai_whisper-base.en"
     @AppStorage("voice.language") private var language = "en"
     @AppStorage("voice.removeFillers") private var removeFillers = true
+    @AppStorage("voice.activationMode") private var activationMode = "hold"
     @AppStorage(ModifierHoldMonitor.defaultsKey) private var modifierMask = 0
     @ObservedObject private var controller = VoiceController.shared
     @State private var micStatus = PermissionsService.microphoneStatus
@@ -40,7 +41,13 @@ struct VoiceSettingsView: View {
 
             Section("Shortcut") {
                 KeyboardShortcuts.Recorder("Push to talk", name: .pushToTalk)
-                Text("Hold to record, release to transcribe and paste at the cursor.")
+                Picker("Activation", selection: $activationMode) {
+                    Text("Hold to talk").tag("hold")
+                    Text("Press to start, press to stop").tag("toggle")
+                }
+                Text(activationMode == "hold"
+                     ? "Hold to record, release to transcribe and paste at the cursor."
+                     : "Press once to start recording, press again to stop, transcribe, and paste.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

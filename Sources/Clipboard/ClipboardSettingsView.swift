@@ -5,6 +5,7 @@ import SwiftUI
 struct ClipboardSettingsView: View {
     @AppStorage("clipboard.enabled") private var enabled = true
     @AppStorage("clipboard.maxItems") private var maxItems = 500
+    @AppStorage("clipboard.copySound") private var copySound = true
     @State private var showClearConfirmation = false
     @State private var clearError: String?
     @State private var hasAccessibility = PermissionsService.hasAccessibility
@@ -21,6 +22,7 @@ struct ClipboardSettingsView: View {
                     LabeledContent("Maximum items", value: "\(maxItems)")
                 }
                 KeyboardShortcuts.Recorder("Open paste picker", name: .pastePicker)
+                Toggle("Play sound when something is copied", isOn: $copySound)
             }
             Section("History") {
                 Button("Clear unpinned history…", role: .destructive) { showClearConfirmation = true }
