@@ -1,12 +1,21 @@
 #!/bin/bash
 # Usage:
-#   ./scripts/release.sh                    # ad-hoc signed DMG (personal use)
+#   ./scripts/release.sh                    # auto-detects an Apple Development cert, else ad-hoc
 #   SIGN_ID="Developer ID Application: ..." NOTARY_PROFILE=fuse ./scripts/release.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 VERSION=$(date +%Y.%m.%d)
-SIGN_ID="${SIGN_ID:--}"            # "-" = ad-hoc
+# Prefer a stable signing identity: with an Apple Development certificate the
+# app's designated requirement survives rebuilds, so TCC permission grants
+# (Accessibility, Input Monitoring, Screen Recording) stick across updates.
+# Falls back to ad-hoc ("-") when no certificate is installed.
+if [[ -z "${SIGN_ID:-}" ]]; then
+  SIGN_ID=$(security find-identity -v -p codesigning 2>/dev/null \
+    | grep -o '"Apple Development[^"]*"' | head -1 | tr -d '"')
+  SIGN_ID="${SIGN_ID:--}"
+fi
+echo "Signing as: $SIGN_ID"
 OUT=dist
 APP="$OUT/Fuse.app"
 
