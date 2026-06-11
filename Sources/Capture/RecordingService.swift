@@ -5,13 +5,14 @@ import AppKit
 /// lives in RecordingService, not in the enum, so phases stay Equatable.
 enum RecordingStateMachine {
     enum Phase: Equatable {
-        case idle, selectingRegion, recording, finishing
+        case idle, selectingRegion, armed, recording, finishing
     }
 
     enum Event: Equatable {
         case toggle           // hotkey or menu item
         case regionConfirmed  // picker delivered a region / fullScreen
-        case regionCancelled  // picker Esc
+        case regionCancelled  // picker Esc / armed-HUD Cancel button
+        case startRequested   // armed-HUD Start button
         case stopRequested    // HUD Stop button
         case processExited    // screencapture terminated (any reason)
     }
@@ -30,11 +31,15 @@ enum RecordingStateMachine {
         case (.idle, .toggle):
             return (.selectingRegion, .presentRegionPicker)
         case (.selectingRegion, .regionConfirmed):
-            return (.recording, .startProcess)
+            return (.armed, .none)   // selection done; wait for explicit Start
         case (.selectingRegion, .regionCancelled):
             return (.idle, .none)
         case (.selectingRegion, .toggle):
             return (.idle, .dismissRegionPicker)
+        case (.armed, .startRequested), (.armed, .toggle):
+            return (.recording, .startProcess)   // hotkey also starts when armed
+        case (.armed, .regionCancelled):
+            return (.idle, .none)
         case (.recording, .toggle), (.recording, .stopRequested):
             return (.finishing, .stopProcess)
         case (.recording, .processExited):
@@ -68,6 +73,8 @@ final class RecordingService {
 
     func toggle() { handle(.toggle) }
     func stop() { handle(.stopRequested) }
+    func startArmed() { handle(.startRequested) }
+    func cancelArmed() { handle(.regionCancelled) }
 
     private func handle(_ event: RecordingStateMachine.Event) {
         let (next, action) = RecordingStateMachine.transition(from: phase, on: event)

@@ -5,6 +5,7 @@ struct DownloaderSettingsView: View {
     @AppStorage("downloader.destinationPath") private var destinationPath = NSHomeDirectory() + "/Downloads"
     @AppStorage("downloader.qualityPreset") private var qualityPreset = "best"
     @AppStorage("downloader.maxConcurrent") private var maxConcurrent = 2
+    @AppStorage("downloader.container") private var container = "mp4"
 
     @State private var installing = false
     @State private var installError: String?
@@ -29,6 +30,15 @@ struct DownloaderSettingsView: View {
                     Text("Up to 720p").tag("720p")
                     Text("Audio only (MP3)").tag("audio")
                 }
+                Picker("Video format", selection: $container) {
+                    Text("MP4").tag("mp4")
+                    Text("MKV").tag("mkv")
+                    Text("WebM").tag("webm")
+                    Text("Original (as provided)").tag("original")
+                }
+                Text("Remuxing into a chosen container requires ffmpeg; without it (or for Audio only), the site's original format is kept.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 Stepper("Max concurrent downloads: \(maxConcurrent)",
                         value: $maxConcurrent, in: 1...4)
             }

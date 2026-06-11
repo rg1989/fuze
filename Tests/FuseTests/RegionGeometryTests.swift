@@ -63,8 +63,20 @@ final class RecordingStateMachineTests: XCTestCase {
         assertTransition(.idle, .toggle, becomes: .selectingRegion, doing: .presentRegionPicker)
     }
 
-    func testRegionConfirmedStartsProcess() {
-        assertTransition(.selectingRegion, .regionConfirmed, becomes: .recording, doing: .startProcess)
+    func testRegionConfirmedArmsWithoutStarting() {
+        assertTransition(.selectingRegion, .regionConfirmed, becomes: .armed, doing: .none)
+    }
+
+    func testArmedStartRequestBeginsRecording() {
+        assertTransition(.armed, .startRequested, becomes: .recording, doing: .startProcess)
+    }
+
+    func testArmedToggleAlsoBeginsRecording() {
+        assertTransition(.armed, .toggle, becomes: .recording, doing: .startProcess)
+    }
+
+    func testArmedCancelReturnsToIdle() {
+        assertTransition(.armed, .regionCancelled, becomes: .idle, doing: .none)
     }
 
     func testRegionCancelledReturnsToIdle() {
@@ -97,5 +109,7 @@ final class RecordingStateMachineTests: XCTestCase {
         assertTransition(.idle, .stopRequested, becomes: .idle, doing: .none)
         assertTransition(.finishing, .toggle, becomes: .finishing, doing: .none)
         assertTransition(.recording, .regionConfirmed, becomes: .recording, doing: .none)
+        assertTransition(.armed, .processExited, becomes: .armed, doing: .none)
+        assertTransition(.armed, .stopRequested, becomes: .armed, doing: .none)
     }
 }

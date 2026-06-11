@@ -2,7 +2,11 @@ import AppKit
 import SwiftUI
 
 final class RecHUDModel: ObservableObject {
+    enum Mode { case armed, recording }
+    @Published var mode: Mode = .recording
     @Published var elapsedText = "0:00"
+    var onStart: (() -> Void)?
+    var onCancel: (() -> Void)?
     var onStop: (() -> Void)?
 }
 
@@ -11,12 +15,23 @@ struct RecHUDView: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Circle()
-                .fill(.red)
-                .frame(width: 10, height: 10)
-            Text(model.elapsedText)
-                .font(.system(.body, design: .monospaced))
-            Button("Stop") { model.onStop?() }
+            switch model.mode {
+            case .armed:
+                Circle()
+                    .strokeBorder(.red, lineWidth: 2)
+                    .frame(width: 10, height: 10)
+                Text("Ready")
+                Button("● Start") { model.onStart?() }
+                    .tint(.red)
+                Button("Cancel") { model.onCancel?() }
+            case .recording:
+                Circle()
+                    .fill(.red)
+                    .frame(width: 10, height: 10)
+                Text(model.elapsedText)
+                    .font(.system(.body, design: .monospaced))
+                Button("Stop") { model.onStop?() }
+            }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
@@ -37,8 +52,26 @@ final class RecHUD {
         get { model.onStop }
         set { model.onStop = newValue }
     }
+    var onStart: (() -> Void)? {
+        get { model.onStart }
+        set { model.onStart = newValue }
+    }
+    var onCancel: (() -> Void)? {
+        get { model.onCancel }
+        set { model.onCancel = newValue }
+    }
+
+    /// Pre-recording controls: region picked, waiting for Start/Cancel.
+    func showArmed() {
+        timer?.invalidate()
+        timer = nil
+        startedAt = nil
+        model.mode = .armed
+        presentPanel()
+    }
 
     func show() {
+        model.mode = .recording
         startedAt = Date()
         model.elapsedText = "0:00"
         timer?.invalidate()
@@ -47,9 +80,13 @@ final class RecHUD {
             let s = Int(Date().timeIntervalSince(startedAt))
             self.model.elapsedText = String(format: "%d:%02d", s / 60, s % 60)
         }
+        presentPanel()
+    }
+
+    private func presentPanel() {
         if panel == nil {
             let panel = NSPanel(
-                contentRect: NSRect(x: 0, y: 0, width: 170, height: 44),
+                contentRect: NSRect(x: 0, y: 0, width: 240, height: 44),
                 styleMask: [.borderless, .nonactivatingPanel],
                 backing: .buffered,
                 defer: false)
@@ -63,7 +100,7 @@ final class RecHUD {
         }
         if let screen = NSScreen.main {
             let f = screen.visibleFrame
-            panel?.setFrameOrigin(CGPoint(x: f.maxX - 200, y: f.maxY - 64))
+            panel?.setFrameOrigin(CGPoint(x: f.maxX - 270, y: f.maxY - 64))
         }
         panel?.orderFrontRegardless()
     }

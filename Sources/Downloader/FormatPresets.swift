@@ -26,4 +26,14 @@ enum FormatPresets {
             return ffmpegAvailable ? ["-f", "bv*+ba/b"] : ["-f", "b"]
         }
     }
+
+    /// Container args for the "downloader.container" setting. Remuxing needs
+    /// ffmpeg; the audio preset produces MP3 so containers don't apply; and
+    /// "original" (or anything unrecognized) keeps whatever the site provides.
+    static func containerArguments(container: String, preset: String,
+                                   ffmpegAvailable: Bool) -> [String] {
+        guard ffmpegAvailable, preset != "audio",
+              ["mp4", "mkv", "webm"].contains(container) else { return [] }
+        return ["--merge-output-format", container, "--remux-video", container]
+    }
 }

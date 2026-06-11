@@ -10,15 +10,16 @@ enum CaptureKind {
 /// Timestamped capture filenames — the ONE place these strings are built.
 /// Pure: Date and TimeZone are injected; never call Date() in here.
 enum CaptureNames {
-    static func fileName(kind: CaptureKind, date: Date, timeZone: TimeZone = .current) -> String {
+    static func fileName(kind: CaptureKind, date: Date, timeZone: TimeZone = .current,
+                         fileExtension: String? = nil) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.timeZone = timeZone
         formatter.dateFormat = "yyyy-MM-dd 'at' HH.mm.ss"
         let stamp = formatter.string(from: date)
         switch kind {
-        case .screenshot: return "Fuse Shot \(stamp).png"
-        case .recording: return "Fuse Recording \(stamp).mov"
+        case .screenshot: return "Fuse Shot \(stamp).\(fileExtension ?? "png")"
+        case .recording: return "Fuse Recording \(stamp).\(fileExtension ?? "mov")"
         }
     }
 }

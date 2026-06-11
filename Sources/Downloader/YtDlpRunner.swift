@@ -173,6 +173,10 @@ final class YtDlpRunner {
 
         let ffmpegPath = ToolManager.shared.ffmpegPath()
         var arguments = FormatPresets.arguments(preset: preset, ffmpegAvailable: ffmpegPath != nil)
+        arguments += FormatPresets.containerArguments(
+            container: UserDefaults.standard.string(forKey: "downloader.container") ?? "mp4",
+            preset: preset,
+            ffmpegAvailable: ffmpegPath != nil)
         arguments += [
             "--no-playlist",
             "--newline",

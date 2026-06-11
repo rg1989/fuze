@@ -6,6 +6,8 @@ struct CaptureSettingsView: View {
     @AppStorage("capture.saveFolderPath") private var saveFolderPath = CaptureController.defaultSaveFolder
     @AppStorage("capture.copyToClipboard") private var copyToClipboard = true
     @AppStorage("capture.openEditorAfter") private var openEditorAfter = true
+    @AppStorage("capture.imageFormat") private var imageFormat = "png"
+    @AppStorage("capture.videoFormat") private var videoFormat = "mp4"
 
     @State private var hasScreenRecording = PermissionsService.hasScreenRecording
     private let refresh = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
@@ -48,6 +50,14 @@ struct CaptureSettingsView: View {
                     }
                     Spacer()
                     Button("Choose…") { chooseFolder() }
+                }
+                Picker("Screenshot format", selection: $imageFormat) {
+                    Text("PNG").tag("png")
+                    Text("JPEG").tag("jpg")
+                }
+                Picker("Recording format", selection: $videoFormat) {
+                    Text("MP4").tag("mp4")
+                    Text("MOV").tag("mov")
                 }
                 Toggle("Copy capture to clipboard", isOn: $copyToClipboard)
                 Toggle("Open editor after capture", isOn: $openEditorAfter)

@@ -22,13 +22,20 @@ final class CaptureController {
             "capture.saveFolderPath": Self.defaultSaveFolder,
             "capture.copyToClipboard": true,
             "capture.openEditorAfter": true,
+            "capture.imageFormat": "png",
+            "capture.videoFormat": "mp4",
         ])
 
         recorder.onPhaseChange = { [weak self] phase in
-            if phase == .recording {
+            switch phase {
+            case .armed:
+                self?.hud.showArmed()
+            case .recording:
                 self?.hud.show()
-            } else if phase == .idle {
+            case .idle, .finishing:
                 self?.hud.hide()
+            case .selectingRegion:
+                break
             }
             self?.refreshMenuTitle()
         }
@@ -44,9 +51,14 @@ final class CaptureController {
                 Log.capture.info("recording produced no file; nothing to save")
                 return
             }
-            self.runOutputPipeline(tempURL: url, kind: .recording)
+            let format = UserDefaults.standard.string(forKey: "capture.videoFormat") ?? "mp4"
+            VideoRemuxer.remuxIfNeeded(url, to: format) { [weak self] finalURL in
+                self?.runOutputPipeline(tempURL: finalURL, kind: .recording)
+            }
         }
         hud.onStop = { [weak self] in self?.recorder.stop() }
+        hud.onStart = { [weak self] in self?.recorder.startArmed() }
+        hud.onCancel = { [weak self] in self?.recorder.cancelArmed() }
 
         // Hotkeys are automatically silenced by PauseManager via
         // KeyboardShortcuts.isEnabled — no pause handling needed here.
@@ -80,8 +92,9 @@ final class CaptureController {
     private func runOutputPipeline(tempURL: URL, kind: CaptureKind) {
         let defaults = UserDefaults.standard
         let folder = defaults.string(forKey: "capture.saveFolderPath") ?? Self.defaultSaveFolder
+        let ext = tempURL.pathExtension.isEmpty ? nil : tempURL.pathExtension
         let dest = URL(fileURLWithPath: folder)
-            .appendingPathComponent(CaptureNames.fileName(kind: kind, date: Date()))
+            .appendingPathComponent(CaptureNames.fileName(kind: kind, date: Date(), fileExtension: ext))
         do {
             try FileManager.default.createDirectory(
                 at: URL(fileURLWithPath: folder), withIntermediateDirectories: true)
@@ -107,10 +120,13 @@ final class CaptureController {
         let urlData = url.dataRepresentation
         switch kind {
         case .screenshot:
-            guard let pngData = try? Data(contentsOf: url) else { return }
+            guard let imageData = try? Data(contentsOf: url) else { return }
+            let imageType: NSPasteboard.PasteboardType =
+                ["jpg", "jpeg"].contains(url.pathExtension.lowercased())
+                    ? NSPasteboard.PasteboardType("public.jpeg") : .png
             // markInternal: false is LOAD-BEARING — Fuse's own clipboard
             // history must record this item (the watcher skips marked items).
-            PasteService.write([[.png: pngData], [Self.fileURLType: urlData]],
+            PasteService.write([[imageType: imageData], [Self.fileURLType: urlData]],
                                markInternal: false)
         case .recording:
             PasteService.write([[Self.fileURLType: urlData]], markInternal: false)

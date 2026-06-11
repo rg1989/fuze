@@ -13,11 +13,12 @@ final class ScreenshotService {
     /// cancelled with Esc (screencapture exits without writing the file).
     func captureInteractive(completion: @escaping (URL?) -> Void) {
         guard process == nil else { return }   // one interactive session at a time
+        let format = UserDefaults.standard.string(forKey: "capture.imageFormat") ?? "png"
         let tmp = FileManager.default.temporaryDirectory
-            .appendingPathComponent("fuse-shot-\(UUID().uuidString).png")
+            .appendingPathComponent("fuse-shot-\(UUID().uuidString).\(format)")
         let proc = Process()
         proc.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
-        proc.arguments = ["-i", "-o", tmp.path]
+        proc.arguments = ["-i", "-o", "-t", format, tmp.path]
         proc.terminationHandler = { [weak self] _ in
             DispatchQueue.main.async {
                 self?.process = nil
