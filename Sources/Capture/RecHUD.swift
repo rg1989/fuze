@@ -10,7 +10,7 @@ final class RecHUDModel: ObservableObject {
     var onStop: (() -> Void)?
 }
 
-/// Red recording dot with a soft pulsing glow.
+/// Recording dot with a soft pulsing glow.
 private struct RecPulseDot: View {
     var hollow = false
 
@@ -19,8 +19,7 @@ private struct RecPulseDot: View {
             let t = context.date.timeIntervalSinceReferenceDate
             let pulse = 0.5 + 0.5 * sin(t * 3.2)
             let gradient = LinearGradient(
-                colors: [Color(red: 1.0, green: 0.32, blue: 0.30),
-                         Color(red: 0.82, green: 0.05, blue: 0.18)],
+                colors: [FuseTheme.terracotta, FuseTheme.terracottaDeep],
                 startPoint: .top, endPoint: .bottom)
             Group {
                 if hollow {
@@ -30,7 +29,8 @@ private struct RecPulseDot: View {
                 }
             }
             .frame(width: 12, height: 12)
-            .shadow(color: .red.opacity(0.45 + 0.35 * pulse), radius: 5 + 3 * pulse)
+            .shadow(color: FuseTheme.terracotta.opacity(0.45 + 0.35 * pulse),
+                    radius: 5 + 3 * pulse)
         }
     }
 }
@@ -44,45 +44,38 @@ struct RecHUDView: View {
             case .armed:
                 RecPulseDot(hollow: true)
                 Text("Ready to record")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.92))
+                    .font(FuseTheme.hudFont(size: 14))
+                    .foregroundStyle(FuseTheme.ink.opacity(0.92))
                 Button { model.onStart?() } label: {
                     Label("Start", systemImage: "record.circle.fill")
                         .font(.system(size: 13, weight: .semibold))
                         .padding(.horizontal, 4)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(Color(red: 0.85, green: 0.10, blue: 0.20))
+                .tint(FuseTheme.terracottaDeep)
                 .controlSize(.large)
                 .keyboardShortcut(.defaultAction)
                 Button("Cancel") { model.onCancel?() }
                     .buttonStyle(.bordered)
                     .controlSize(.large)
-                    .tint(.white)
+                    .tint(FuseTheme.ink)
             case .recording:
                 RecPulseDot()
                 Text(model.elapsedText)
-                    .font(.system(size: 14, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.92))
+                    .font(FuseTheme.hudFont(size: 14, weight: .semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(FuseTheme.ink.opacity(0.92))
                 Button { model.onStop?() } label: {
                     Label("Stop", systemImage: "stop.fill")
                         .font(.system(size: 12, weight: .semibold))
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(Color(red: 0.85, green: 0.10, blue: 0.20))
+                .tint(FuseTheme.terracottaDeep)
             }
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 12)
-        .background(.ultraThinMaterial, in: Capsule())
-        .background(Color.black.opacity(0.45), in: Capsule())
-        .overlay(
-            Capsule().strokeBorder(
-                LinearGradient(colors: [.white.opacity(0.35), .white.opacity(0.06)],
-                               startPoint: .top, endPoint: .bottom),
-                lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.35), radius: 16, y: 6)
+        .hudPillChrome()
         .padding(20)   // room for the shadow inside the borderless panel
     }
 }

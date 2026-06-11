@@ -14,7 +14,7 @@ final class RecordingHUDModel: ObservableObject {
     @Published var display: Display = .hidden
 }
 
-/// Pulsing red-orange orb with a soft glow — the "live mic" indicator.
+/// Pulsing terracotta orb with a soft glow — the "live mic" indicator.
 private struct GlowOrb: View {
     var body: some View {
         TimelineView(.animation(minimumInterval: 1 / 30)) { context in
@@ -22,16 +22,16 @@ private struct GlowOrb: View {
             let pulse = 0.5 + 0.5 * sin(t * 3.0)
             ZStack {
                 Circle()
-                    .fill(Color.red.opacity(0.30 + 0.25 * pulse))
+                    .fill(FuseTheme.terracotta.opacity(0.25 + 0.25 * pulse))
                     .frame(width: 22, height: 22)
                     .blur(radius: 6)
                 Circle()
                     .fill(LinearGradient(
-                        colors: [Color(red: 1.0, green: 0.45, blue: 0.30),
-                                 Color(red: 0.90, green: 0.07, blue: 0.25)],
+                        colors: [FuseTheme.terracotta, FuseTheme.terracottaDeep],
                         startPoint: .top, endPoint: .bottom))
                     .frame(width: 12, height: 12)
-                    .shadow(color: .red.opacity(0.55 + 0.30 * pulse), radius: 4 + 4 * pulse)
+                    .shadow(color: FuseTheme.terracotta.opacity(0.5 + 0.3 * pulse),
+                            radius: 4 + 4 * pulse)
             }
             .frame(width: 24, height: 24)
         }
@@ -49,7 +49,7 @@ private struct EqualizerBars: View {
                     let height = 5 + 13 * abs(sin(t * 2.7 + phase) * sin(t * 1.6 + phase * 1.4))
                     Capsule()
                         .fill(LinearGradient(
-                            colors: [Color(red: 1.0, green: 0.55, blue: 0.30), .red],
+                            colors: [FuseTheme.terracotta, FuseTheme.terracottaDeep],
                             startPoint: .top, endPoint: .bottom))
                         .frame(width: 3, height: height)
                 }
@@ -67,12 +67,14 @@ private struct ShimmerRing: View {
             Circle()
                 .stroke(
                     AngularGradient(
-                        colors: [.cyan.opacity(0.0), .cyan, Color(red: 0.45, green: 0.55, blue: 1.0)],
+                        colors: [FuseTheme.terracotta.opacity(0.0),
+                                 FuseTheme.terracotta,
+                                 FuseTheme.terracottaDeep],
                         center: .center),
                     style: StrokeStyle(lineWidth: 3, lineCap: .round))
                 .frame(width: 17, height: 17)
                 .rotationEffect(.radians(t * 2.6))
-                .shadow(color: .cyan.opacity(0.5), radius: 5)
+                .shadow(color: FuseTheme.terracotta.opacity(0.5), radius: 5)
                 .frame(width: 24, height: 24)
         }
     }
@@ -90,36 +92,25 @@ struct RecordingHUDView: View {
                 GlowOrb()
                 EqualizerBars()
                 Text("Recording")
-                    .foregroundStyle(.white.opacity(0.92))
             case .transcribing:
                 ShimmerRing()
                 Text("Transcribing…")
-                    .foregroundStyle(.white.opacity(0.92))
             case .message(let text):
                 Image(systemName: "exclamationmark.circle.fill")
                     .font(.system(size: 16))
-                    .foregroundStyle(.orange)
-                    .shadow(color: .orange.opacity(0.5), radius: 5)
+                    .foregroundStyle(FuseTheme.terracotta)
+                    .shadow(color: FuseTheme.terracotta.opacity(0.4), radius: 5)
                 Text(text)
-                    .foregroundStyle(.white.opacity(0.92))
                     .lineLimit(2)
                     .frame(maxWidth: 320, alignment: .leading)
                     .fixedSize(horizontal: true, vertical: false)
             }
         }
-        .font(.system(size: 13, weight: .semibold))
-        .padding(.horizontal, 18)
-        .padding(.vertical, 13)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .background(Color.black.opacity(0.45), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(
-                    LinearGradient(colors: [.white.opacity(0.35), .white.opacity(0.05)],
-                                   startPoint: .top, endPoint: .bottom),
-                    lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.40), radius: 18, y: 7)
+        .font(FuseTheme.hudFont(size: 14))
+        .foregroundStyle(FuseTheme.ink.opacity(0.92))
+        .padding(.horizontal, 19)
+        .padding(.vertical, 12)
+        .hudPillChrome()
         .padding(24)   // room for the shadow inside the borderless panel
     }
 }
