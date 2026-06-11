@@ -5,6 +5,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var settingsWindow: NSWindow?
 
+    private var notesController: NotesController!
+    private var notesMenuItem: NSMenuItem!
     // FUSE:CONTROLLER-PROPS
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -22,11 +24,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(pauseItem)
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ","))
+        notesMenuItem = NSMenuItem(title: "Notes", action: nil, keyEquivalent: "")
+        menu.addItem(notesMenuItem)
         // FUSE:MENU-ITEMS
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit Fuse", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         statusItem.menu = menu
 
+        notesController = NotesController()
+        notesController.start()
+        notesMenuItem.target = notesController
+        notesMenuItem.action = #selector(NotesController.toggleFromMenu)
         // FUSE:CONTROLLER-START
 
         // One-time coexistence check: if a known overlapping utility is running
