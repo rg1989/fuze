@@ -71,6 +71,7 @@ final class NotificationsController: NSObject {
             return
         }
         let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
+            guard !PauseManager.shared.isPaused else { return }   // pause = no automation
             self?.clearNow()
         }
         timer.tolerance = interval * 0.1
