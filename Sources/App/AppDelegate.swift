@@ -10,6 +10,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var clipboardController: ClipboardController!
     private var voiceController: VoiceController!
     private var downloaderController: DownloaderController!
+    private var notificationsController: NotificationsController!
+    private var clearNotificationsMenuItem: NSMenuItem!
     // FUSE:CONTROLLER-PROPS
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -38,6 +40,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                                keyEquivalent: "")
         clipboardDownloadItem.target = downloaderController
         menu.addItem(clipboardDownloadItem)
+        clearNotificationsMenuItem = NSMenuItem(
+            title: "Clear Notifications",
+            action: #selector(NotificationsController.clearNow),
+            keyEquivalent: "")
+        menu.addItem(clearNotificationsMenuItem)
         // FUSE:MENU-ITEMS
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit Fuse", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
@@ -53,6 +60,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         voiceController.start()
         if downloaderController == nil { downloaderController = DownloaderController() }
         downloaderController.start()
+        notificationsController = NotificationsController()
+        notificationsController.start()
+        clearNotificationsMenuItem.target = notificationsController
         // FUSE:CONTROLLER-START
 
         // One-time coexistence check: if a known overlapping utility is running
