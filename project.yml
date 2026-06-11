@@ -50,6 +50,9 @@ targets:
   FuseTests:
     type: bundle.unit-test
     platform: macOS
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
     sources:
       - Tests
     dependencies:
