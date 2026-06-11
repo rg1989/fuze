@@ -17,21 +17,21 @@ All shell commands in this plan run from the repo root: `/Users/rgv250cc/Documen
 **Files:**
 - None created or modified. Verification only.
 
-- [ ] **Step 1: Verify Phase 1 Core files exist**
+- [x] **Step 1: Verify Phase 1 Core files exist**
 
 ```bash
 ls /Users/rgv250cc/Documents/Projects/Fuse/Sources/Core
 ```
 Expected output contains all of: `AX.swift`, `HotkeyNames.swift`, `Log.swift`, `PasteService.swift`, `Permissions.swift`. If any is missing, STOP — Phase 1 is not complete; do not proceed.
 
-- [ ] **Step 2: Verify the integration anchors exist**
+- [x] **Step 2: Verify the integration anchors exist**
 
 ```bash
 grep -n "FUSE:" /Users/rgv250cc/Documents/Projects/Fuse/Sources/App/AppDelegate.swift /Users/rgv250cc/Documents/Projects/Fuse/Sources/App/SettingsRootView.swift
 ```
 Expected: four hits — `// FUSE:CONTROLLER-PROPS`, `// FUSE:MENU-ITEMS`, `// FUSE:CONTROLLER-START` in `AppDelegate.swift` and `// FUSE:SETTINGS_TABS` in `SettingsRootView.swift`. If any anchor is missing, STOP and fix Phase 0/1 first.
 
-- [ ] **Step 3: Verify the build and tests are green before touching anything**
+- [x] **Step 3: Verify the build and tests are green before touching anything**
 
 ```bash
 xcodegen generate
@@ -40,7 +40,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 ```
 Expected: `** BUILD SUCCEEDED **` then `** TEST SUCCEEDED **`. Do not start Task 6.1 on a red build.
 
-- [ ] **Step 4: Create the feature directory**
+- [x] **Step 4: Create the feature directory**
 
 ```bash
 mkdir -p /Users/rgv250cc/Documents/Projects/Fuse/Sources/Downloader
@@ -56,7 +56,7 @@ yt-dlp is invoked with `--newline` and `--progress-template "download:FUSEP|%(pr
 - Create: `Sources/Downloader/ProgressParser.swift`
 - Test: `Tests/FuseTests/ProgressParserTests.swift`
 
-- [ ] **Step 1: Write the failing tests — `Tests/FuseTests/ProgressParserTests.swift`**
+- [x] **Step 1: Write the failing tests — `Tests/FuseTests/ProgressParserTests.swift`**
 
 ```swift
 import XCTest
@@ -97,7 +97,7 @@ final class ProgressParserTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 xcodegen generate
@@ -105,7 +105,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 ```
 Expected: **BUILD FAILS** with `cannot find 'ProgressParser' in scope` (a compile failure is this step's "red").
 
-- [ ] **Step 3: Write `Sources/Downloader/ProgressParser.swift`**
+- [x] **Step 3: Write `Sources/Downloader/ProgressParser.swift`**
 
 ```swift
 import Foundation
@@ -147,7 +147,7 @@ enum ProgressParser {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 xcodegen generate
@@ -155,7 +155,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 ```
 Expected: `** TEST SUCCEEDED **`; the 6 new `ProgressParserTests` are listed as passed (total test count depends on which other phases are already merged).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/Downloader/ProgressParser.swift Tests/FuseTests/ProgressParserTests.swift
@@ -172,7 +172,7 @@ Maps the `"downloader.qualityPreset"` settings value (`"best" | "1080p" | "720p"
 - Create: `Sources/Downloader/FormatPresets.swift`
 - Test: `Tests/FuseTests/FormatPresetsTests.swift`
 
-- [ ] **Step 1: Write the failing tests — `Tests/FuseTests/FormatPresetsTests.swift`**
+- [x] **Step 1: Write the failing tests — `Tests/FuseTests/FormatPresetsTests.swift`**
 
 ```swift
 import XCTest
@@ -209,7 +209,7 @@ final class FormatPresetsTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 xcodegen generate
@@ -217,7 +217,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 ```
 Expected: **BUILD FAILS** with `cannot find 'FormatPresets' in scope`.
 
-- [ ] **Step 3: Write `Sources/Downloader/FormatPresets.swift`**
+- [x] **Step 3: Write `Sources/Downloader/FormatPresets.swift`**
 
 ```swift
 import Foundation
@@ -251,7 +251,7 @@ enum FormatPresets {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 xcodegen generate
@@ -259,7 +259,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 ```
 Expected: `** TEST SUCCEEDED **`; the 4 new `FormatPresetsTests` pass (every preset × ffmpeg branch is asserted).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/Downloader/FormatPresets.swift Tests/FuseTests/FormatPresetsTests.swift
@@ -276,7 +276,7 @@ Metadata is fetched with `yt-dlp -J --no-playlist <url>`, which prints a single 
 - Create: `Sources/Downloader/VideoMetadata.swift`
 - Test: `Tests/FuseTests/VideoMetadataTests.swift`
 
-- [ ] **Step 1: Write the failing tests — `Tests/FuseTests/VideoMetadataTests.swift`**
+- [x] **Step 1: Write the failing tests — `Tests/FuseTests/VideoMetadataTests.swift`**
 
 ```swift
 import XCTest
@@ -331,7 +331,7 @@ final class VideoMetadataTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 xcodegen generate
@@ -339,7 +339,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 ```
 Expected: **BUILD FAILS** with `cannot find 'VideoMetadata' in scope`.
 
-- [ ] **Step 3: Write `Sources/Downloader/VideoMetadata.swift`**
+- [x] **Step 3: Write `Sources/Downloader/VideoMetadata.swift`**
 
 ```swift
 import Foundation
@@ -365,7 +365,7 @@ struct VideoMetadata: Decodable, Equatable {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 xcodegen generate
@@ -373,7 +373,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 ```
 Expected: `** TEST SUCCEEDED **`; the 3 new `VideoMetadataTests` pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/Downloader/VideoMetadata.swift Tests/FuseTests/VideoMetadataTests.swift
@@ -389,7 +389,7 @@ Downloads the latest standalone `yt-dlp_macos` release into `~/Library/Applicati
 **Files:**
 - Create: `Sources/Downloader/ToolManager.swift`
 
-- [ ] **Step 1: Write `Sources/Downloader/ToolManager.swift`**
+- [x] **Step 1: Write `Sources/Downloader/ToolManager.swift`**
 
 ```swift
 import Darwin
@@ -496,7 +496,7 @@ final class ToolManager {
 }
 ```
 
-- [ ] **Step 2: Regenerate, build, run tests**
+- [x] **Step 2: Regenerate, build, run tests**
 
 ```bash
 xcodegen generate
@@ -505,7 +505,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 ```
 Expected: `** BUILD SUCCEEDED **` then `** TEST SUCCEEDED **` (no new tests; existing suite stays green).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add Sources/Downloader/ToolManager.swift
@@ -521,7 +521,7 @@ Two operations: metadata fetch (`yt-dlp -J --no-playlist <url>`, stdout decoded 
 **Files:**
 - Create: `Sources/Downloader/YtDlpRunner.swift`
 
-- [ ] **Step 1: Write `Sources/Downloader/YtDlpRunner.swift`**
+- [x] **Step 1: Write `Sources/Downloader/YtDlpRunner.swift`**
 
 ```swift
 import Foundation
@@ -790,7 +790,7 @@ final class YtDlpRunner {
 }
 ```
 
-- [ ] **Step 2: Regenerate, build, run tests**
+- [x] **Step 2: Regenerate, build, run tests**
 
 ```bash
 xcodegen generate
@@ -799,7 +799,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 ```
 Expected: `** BUILD SUCCEEDED **` then `** TEST SUCCEEDED **`.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add Sources/Downloader/YtDlpRunner.swift
@@ -816,7 +816,7 @@ The observable queue the UI binds to. The scheduling decision ("which queued ite
 - Create: `Sources/Downloader/DownloadQueue.swift`
 - Test: `Tests/FuseTests/DownloadQueueTests.swift`
 
-- [ ] **Step 1: Write the failing tests — `Tests/FuseTests/DownloadQueueTests.swift`**
+- [x] **Step 1: Write the failing tests — `Tests/FuseTests/DownloadQueueTests.swift`**
 
 ```swift
 import XCTest
@@ -855,7 +855,7 @@ final class DownloadQueueTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 xcodegen generate
@@ -863,7 +863,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 ```
 Expected: **BUILD FAILS** with `cannot find 'DownloadQueue' in scope` (and/or `DownloadItem`/`DownloadState`).
 
-- [ ] **Step 3: Write `Sources/Downloader/DownloadQueue.swift`**
+- [x] **Step 3: Write `Sources/Downloader/DownloadQueue.swift`**
 
 ```swift
 import Foundation
@@ -1072,7 +1072,7 @@ final class DownloadQueue: ObservableObject {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 xcodegen generate
@@ -1080,7 +1080,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 ```
 Expected: `** TEST SUCCEEDED **`; the 5 new `DownloadQueueTests` pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/Downloader/DownloadQueue.swift Tests/FuseTests/DownloadQueueTests.swift
@@ -1097,7 +1097,7 @@ git commit -m "feat(downloader): add DownloadQueue with concurrency-limited sche
 - Create: `Sources/Downloader/DownloaderController.swift`
 - Create: `Sources/Downloader/DownloadsView.swift`
 
-- [ ] **Step 1: Write `Sources/Downloader/DownloaderController.swift`**
+- [x] **Step 1: Write `Sources/Downloader/DownloaderController.swift`**
 
 ```swift
 import AppKit
@@ -1148,7 +1148,7 @@ final class DownloaderController: NSObject {
 }
 ```
 
-- [ ] **Step 2: Write `Sources/Downloader/DownloadsView.swift`**
+- [x] **Step 2: Write `Sources/Downloader/DownloadsView.swift`**
 
 ```swift
 import AppKit
@@ -1302,7 +1302,7 @@ struct DownloadRowView: View {
 }
 ```
 
-- [ ] **Step 3: Regenerate, build, run tests**
+- [x] **Step 3: Regenerate, build, run tests**
 
 ```bash
 xcodegen generate
@@ -1311,7 +1311,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 ```
 Expected: `** BUILD SUCCEEDED **` then `** TEST SUCCEEDED **`. (The window is not reachable yet — wiring happens in Task 6.9.)
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add Sources/Downloader/DownloaderController.swift Sources/Downloader/DownloadsView.swift
@@ -1327,7 +1327,7 @@ The "Downloads" settings tab: destination folder picker (`NSOpenPanel`, director
 **Files:**
 - Create: `Sources/Downloader/DownloaderSettingsView.swift`
 
-- [ ] **Step 1: Write `Sources/Downloader/DownloaderSettingsView.swift`**
+- [x] **Step 1: Write `Sources/Downloader/DownloaderSettingsView.swift`**
 
 ```swift
 import AppKit
@@ -1444,7 +1444,7 @@ struct DownloaderSettingsView: View {
 }
 ```
 
-- [ ] **Step 2: Regenerate, build, run tests**
+- [x] **Step 2: Regenerate, build, run tests**
 
 ```bash
 xcodegen generate
@@ -1453,7 +1453,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 ```
 Expected: `** BUILD SUCCEEDED **` then `** TEST SUCCEEDED **`.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add Sources/Downloader/DownloaderSettingsView.swift
@@ -1472,7 +1472,7 @@ Ordering note: in `applicationDidFinishLaunching` the menu is built (and `// FUS
 - Modify: `Sources/App/AppDelegate.swift`
 - Modify: `Sources/App/SettingsRootView.swift`
 
-- [ ] **Step 1: Add the controller property in `Sources/App/AppDelegate.swift`**
+- [x] **Step 1: Add the controller property in `Sources/App/AppDelegate.swift`**
 
 Find the line `    // FUSE:CONTROLLER-PROPS` and insert one line directly above it, so the region reads:
 
@@ -1481,7 +1481,7 @@ Find the line `    // FUSE:CONTROLLER-PROPS` and insert one line directly above 
     // FUSE:CONTROLLER-PROPS
 ```
 
-- [ ] **Step 2: Add the menu items in `Sources/App/AppDelegate.swift`**
+- [x] **Step 2: Add the menu items in `Sources/App/AppDelegate.swift`**
 
 Find the line `        // FUSE:MENU-ITEMS` and insert directly above it, so the region reads:
 
@@ -1500,7 +1500,7 @@ Find the line `        // FUSE:MENU-ITEMS` and insert directly above it, so the 
         // FUSE:MENU-ITEMS
 ```
 
-- [ ] **Step 3: Construct and start the controller in `Sources/App/AppDelegate.swift`**
+- [x] **Step 3: Construct and start the controller in `Sources/App/AppDelegate.swift`**
 
 Find the line `        // FUSE:CONTROLLER-START` and insert directly above it, so the region reads:
 
@@ -1510,7 +1510,7 @@ Find the line `        // FUSE:CONTROLLER-START` and insert directly above it, s
         // FUSE:CONTROLLER-START
 ```
 
-- [ ] **Step 4: Add the settings tab in `Sources/App/SettingsRootView.swift`**
+- [x] **Step 4: Add the settings tab in `Sources/App/SettingsRootView.swift`**
 
 Find the line `            // FUSE:SETTINGS_TABS` and insert directly above it, so the region reads:
 
@@ -1520,7 +1520,7 @@ Find the line `            // FUSE:SETTINGS_TABS` and insert directly above it, 
             // FUSE:SETTINGS_TABS
 ```
 
-- [ ] **Step 5: Regenerate, build, run tests**
+- [x] **Step 5: Regenerate, build, run tests**
 
 ```bash
 xcodegen generate
@@ -1541,7 +1541,7 @@ Ask the human to confirm, in this order:
 
 Record the human's answers. Do not proceed until all three are confirmed.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add Sources/App/AppDelegate.swift Sources/App/SettingsRootView.swift
@@ -1603,8 +1603,8 @@ With no downloads running, ask the human to click "Update yt-dlp" in Settings �
 - [ ] **HUMAN-VERIFY** maxConcurrent=1 runs two URLs sequentially (Task 6.10 Step 5).
 - [ ] **HUMAN-VERIFY** Cancel and Retry work mid-download (Task 6.10 Step 6).
 - [ ] **HUMAN-VERIFY** "Update yt-dlp" re-installs cleanly while idle (Task 6.10 Step 7).
-- [ ] All unit tests green: `xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&1 | tail -20` → `** TEST SUCCEEDED **` (18 Phase 6 tests: 6 ProgressParser + 4 FormatPresets + 3 VideoMetadata + 5 DownloadQueue).
-- [ ] `git log --oneline | head -10` shows the nine Phase 6 commits on top.
+- [x] All unit tests green: `xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&1 | tail -20` → `** TEST SUCCEEDED **` (18 Phase 6 tests: 6 ProgressParser + 4 FormatPresets + 3 VideoMetadata + 5 DownloadQueue).
+- [x] `git log --oneline | head -10` shows the nine Phase 6 commits on top.
 
 ## Risks & gotchas
 
