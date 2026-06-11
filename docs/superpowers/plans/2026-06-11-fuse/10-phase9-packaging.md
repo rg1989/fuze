@@ -17,7 +17,7 @@
 - Create: `scripts/make-icon.sh`
 - Modify: `project.yml` (icon setting)
 
-- [ ] **Step 1: HUMAN-VERIFY — source artwork.** Ask the human for a 1024×1024 PNG (`icon-1024.png` in repo root). If they don't have one, generate a placeholder:
+- [x] **Step 1: HUMAN-VERIFY — source artwork.** Ask the human for a 1024×1024 PNG (`icon-1024.png` in repo root). If they don't have one, generate a placeholder:
 
 ```bash
 # Renders the SF Symbol bolt onto a rounded dark background as a stand-in icon.
@@ -49,7 +49,7 @@ EOF
 ls -la icon-1024.png
 ```
 
-- [ ] **Step 2: Write `scripts/make-icon.sh`**
+- [x] **Step 2: Write `scripts/make-icon.sh`**
 
 ```bash
 #!/bin/bash
@@ -84,7 +84,7 @@ JSON
 echo "Icon set written to $DEST"
 ```
 
-- [ ] **Step 3: Generate the icon set and wire it into the build**
+- [x] **Step 3: Generate the icon set and wire it into the build**
 
 ```bash
 chmod +x scripts/make-icon.sh && ./scripts/make-icon.sh
@@ -97,7 +97,7 @@ Then in `project.yml`, inside `targets: → Fuse: → settings:` add a `base:` b
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 ```
 
-- [ ] **Step 4: Rebuild and verify**
+- [x] **Step 4: Rebuild and verify**
 
 ```bash
 xcodegen generate
@@ -106,7 +106,7 @@ pkill -x Fuse; open .build/Build/Products/Debug/Fuse.app
 ```
 Expected: `** BUILD SUCCEEDED **`. **HUMAN-VERIFY:** the new icon shows in Settings window's title bar / app switcher.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts/make-icon.sh Resources/Assets.xcassets project.yml icon-1024.png
@@ -120,7 +120,7 @@ git commit -m "feat: app icon and asset catalog"
 **Files:**
 - Create: `scripts/release.sh`
 
-- [ ] **Step 1: Write `scripts/release.sh`**
+- [x] **Step 1: Write `scripts/release.sh`**
 
 ```bash
 #!/bin/bash
@@ -168,7 +168,7 @@ rm -rf "$OUT/dmg-root"
 echo "Built $DMG"
 ```
 
-- [ ] **Step 2: Run it (ad-hoc path)**
+- [x] **Step 2: Run it (ad-hoc path)**
 
 ```bash
 chmod +x scripts/release.sh && ./scripts/release.sh
@@ -177,7 +177,7 @@ Expected: `codesign OK` and `Built dist/Fuse-<date>.dmg`. Note: an ad-hoc DMG is
 
 - [ ] **Step 3: HUMAN-VERIFY — install from DMG.** Mount the DMG, drag Fuse to /Applications, launch it. macOS treats this as a NEW binary: every permission (Accessibility, Input Monitoring, Microphone) must be re-granted via the General tab. Confirm the app works from /Applications.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add scripts/release.sh
@@ -227,6 +227,15 @@ git commit -m "docs: record release QA results"
 - [ ] DMG built and installed from /Applications.
 - [ ] All 11 QA script items pass.
 - [ ] (Optional) Notarization `Accepted` if Developer ID available.
+
+## Deviations
+
+- **Task 9.1 Step 1:** No human available — generated the placeholder icon via the plan's Swift snippet, written verbatim to `/tmp/makeicon.swift` and run with `swift /tmp/makeicon.swift` from the repo root (heredoc form avoided; code unchanged).
+- **Task 9.1 Step 4:** Build verified (`** BUILD SUCCEEDED **`); did not run `pkill`/`open` — visual icon check is HUMAN-VERIFY and remains pending.
+- **Task 9.2 Step 3 (HUMAN-VERIFY):** Skipped — no human. DMG verified instead via `ls -la dist/` and `hdiutil imageinfo` (valid UDZO image, 8.6 MB).
+- **Task 9.2 Step 5:** Skipped — no Developer ID available; ad-hoc signing only.
+- **.gitignore:** Added `.build-release/` (the release script's derived-data path was not previously ignored).
+- **Task 9.3:** Skipped entirely — pure HUMAN-VERIFY QA pass.
 
 ## Risks & gotchas
 
