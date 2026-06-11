@@ -9,6 +9,7 @@ final class DownloaderController: NSObject {
     private var downloadsWindow: NSWindow?
 
     func start() {
+        UserDefaults.standard.register(defaults: ["downloads.enabled": true])
         // First-use flow: never auto-download the binary without user action.
         // DownloadsView shows an inline banner pointing at Settings → Downloads.
         if !ToolManager.shared.ytDlpInstalled {
@@ -17,6 +18,7 @@ final class DownloaderController: NSObject {
     }
 
     @objc func openDownloadsWindow() {
+        guard UserDefaults.standard.bool(forKey: "downloads.enabled") else { return }
         if downloadsWindow == nil {
             let window = NSWindow(
                 contentRect: NSRect(x: 0, y: 0, width: 560, height: 440),
@@ -31,16 +33,5 @@ final class DownloaderController: NSObject {
         }
         NSApp.activate(ignoringOtherApps: true)
         downloadsWindow?.makeKeyAndOrderFront(nil)
-    }
-
-    @objc func downloadFromClipboard() {
-        openDownloadsWindow()
-        guard let text = NSPasteboard.general.string(forType: .string) else {
-            Log.downloader.info("clipboard download requested but pasteboard has no string")
-            return
-        }
-        if !queue.add(url: text) {
-            Log.downloader.info("clipboard text is not an http(s) URL")
-        }
     }
 }

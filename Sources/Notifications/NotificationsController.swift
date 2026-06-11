@@ -18,6 +18,7 @@ final class NotificationsController: NSObject {
     /// guard, so hotkeys/timers never start inside hosted test runs).
     func start() {
         UserDefaults.standard.register(defaults: [
+            "notifications.enabled": true,
             Self.autoClearEnabledKey: false,
             Self.autoClearIntervalKey: 30,
         ])
@@ -39,6 +40,9 @@ final class NotificationsController: NSObject {
     /// Hotkey, menu item, and auto-clear timer all funnel through here.
     /// Main-thread safe: the AX work is dispatched to the utility queue.
     @objc func clearNow() {
+        // Master switch (General → Fused apps): hotkey, menu item, and the
+        // auto-clear timer all funnel through here.
+        guard UserDefaults.standard.bool(forKey: "notifications.enabled") else { return }
         queue.async { [clearer] in
             let performed = clearer.clearAll()
             Log.notifications.info("clearNow: \(performed) clear action(s) performed")

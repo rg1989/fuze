@@ -12,9 +12,6 @@ final class CaptureController {
     private var videoTrimmers: [VideoTrimmerWindowController] = []
     private var previews: [CapturePreviewWindowController] = []
 
-    /// Set by AppDelegate so the title can swap with recording state.
-    weak var recordingMenuItem: NSMenuItem?
-
     static let defaultScreenshotFolder = NSHomeDirectory() + "/Pictures/Fuse Screenshots"
     static let defaultRecordingFolder = NSHomeDirectory() + "/Movies/Fuse Recordings"
     static let fileURLType = NSPasteboard.PasteboardType("public.file-url")
@@ -22,6 +19,7 @@ final class CaptureController {
     func start() {
         migrateLegacySaveFolder()
         UserDefaults.standard.register(defaults: [
+            "capture.enabled": true,
             "capture.screenshotFolderPath": Self.defaultScreenshotFolder,
             "capture.recordingFolderPath": Self.defaultRecordingFolder,
             "capture.copyToClipboard": true,
@@ -42,12 +40,10 @@ final class CaptureController {
             case .selectingRegion:
                 break
             }
-            self.refreshMenuTitle()
         }
         recorder.onFinished = { [weak self] url in
             guard let self else { return }
             self.hud.hide()
-            self.refreshMenuTitle()
             guard let url,
                   let size = (try? FileManager.default
                       .attributesOfItem(atPath: url.path)[.size] as? NSNumber)?.intValue,
@@ -71,7 +67,11 @@ final class CaptureController {
             self?.captureRegion()
         }
         KeyboardShortcuts.onKeyUp(for: .toggleRecording) { [weak self] in
-            self?.recorder.toggle()
+            guard let self else { return }
+            // Master switch — but an in-flight session can always be stopped.
+            guard UserDefaults.standard.bool(forKey: "capture.enabled")
+                || self.recorder.phase != .idle else { return }
+            self.recorder.toggle()
         }
         KeyboardShortcuts.onKeyUp(for: .openScreenshotsFolder) { [weak self] in
             self?.openFolder(for: .screenshot)
@@ -98,8 +98,6 @@ final class CaptureController {
 
     // MARK: - Entry points (menu items target these)
 
-    @objc func captureRegionFromMenu() { captureRegion() }
-    @objc func toggleRecordingFromMenu() { recorder.toggle() }
     @objc func openScreenshotsFolderFromMenu() { openFolder(for: .screenshot) }
     @objc func openRecordingsFolderFromMenu() { openFolder(for: .recording) }
 
@@ -120,15 +118,12 @@ final class CaptureController {
     }
 
     private func captureRegion() {
+        guard UserDefaults.standard.bool(forKey: "capture.enabled") else { return }
         guard !screenshots.isRunning else { return }
         screenshots.captureInteractive { [weak self] url in
             guard let self, let url else { return }   // nil = user pressed Esc
             self.runOutputPipeline(tempURL: url, kind: .screenshot)
         }
-    }
-
-    private func refreshMenuTitle() {
-        recordingMenuItem?.title = recorder.isRecording ? "Stop Recording" : "Start Recording"
     }
 
     // MARK: - Shared output pipeline

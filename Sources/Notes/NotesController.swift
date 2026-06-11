@@ -11,7 +11,10 @@ final class NotesController {
     private var resignObserver: NSObjectProtocol?
 
     init() {
-        UserDefaults.standard.register(defaults: ["notes.panelPinned": false])
+        UserDefaults.standard.register(defaults: [
+            "notes.enabled": true,
+            "notes.panelPinned": false,
+        ])
         if let store = NoteStore.shared {
             self.model = NotesViewModel(store: store)
         } else {
@@ -34,6 +37,7 @@ final class NotesController {
     }
 
     func toggle() {
+        guard UserDefaults.standard.bool(forKey: "notes.enabled") else { return }
         guard let model else {
             showStoreUnavailableAlert()
             return

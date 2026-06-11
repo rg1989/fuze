@@ -13,6 +13,16 @@ struct GeneralSettingsView: View {
 
     var body: some View {
         Form {
+            Section {
+                ModuleGrid()
+                    .padding(.vertical, 2)
+            } header: {
+                Text("Fused apps")
+            } footer: {
+                Text("Turn a whole app on or off in one place. A disabled app keeps its settings but its hotkeys, menu items, and background behavior go quiet immediately.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             if !conflicts.isEmpty {
                 Section("Conflicting utilities detected") {
                     ForEach(conflicts) { conflict in

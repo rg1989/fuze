@@ -39,6 +39,7 @@ final class VoiceController: ObservableObject {
 
     func start() {
         UserDefaults.standard.register(defaults: [
+            "voice.enabled": true,
             "voice.modelName": "openai_whisper-base.en",
             "voice.language": "en",
             "voice.removeFillers": true,
@@ -98,6 +99,9 @@ final class VoiceController: ObservableObject {
     // MARK: - Trigger handling (hold or toggle mode, see ActivationMapper)
 
     private func triggerDown() {
+        // Master switch (General → Fused apps). A hold already in flight is
+        // unaffected: triggerUp stays open so the session can finish cleanly.
+        guard UserDefaults.standard.bool(forKey: "voice.enabled") else { return }
         guard let event = ActivationMapper.event(forDownIn: session.state,
                                                  mode: ActivationMode.current()) else { return }
         if event == .hotkeyDown {
