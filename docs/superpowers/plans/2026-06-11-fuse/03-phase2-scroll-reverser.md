@@ -17,14 +17,14 @@
 **Files:**
 - None created or modified. Verification only.
 
-- [ ] **Step 1: Verify Phase 1 Core files exist**
+- [x] **Step 1: Verify Phase 1 Core files exist**
 
 ```bash
 ls /Users/rgv250cc/Documents/Projects/Fuse/Sources/Core
 ```
 Expected output contains all five files (order may differ): `AX.swift`, `HotkeyNames.swift`, `Log.swift`, `PasteService.swift`, `Permissions.swift`. If any are missing, STOP — Phase 1 is not complete. Do not proceed.
 
-- [ ] **Step 2: Verify the integration anchors exist**
+- [x] **Step 2: Verify the integration anchors exist**
 
 ```bash
 grep -n "FUSE:CONTROLLER-PROPS\|FUSE:CONTROLLER-START" /Users/rgv250cc/Documents/Projects/Fuse/Sources/App/AppDelegate.swift
@@ -32,7 +32,7 @@ grep -n "FUSE:SETTINGS_TABS" /Users/rgv250cc/Documents/Projects/Fuse/Sources/App
 ```
 Expected: the first command prints two lines (one per anchor), the second prints one line. If any anchor is missing, STOP and restore it from the Phase 0 plan before continuing.
 
-- [ ] **Step 3: Verify the build is green**
+- [x] **Step 3: Verify the build is green**
 
 ```bash
 xcodegen generate
@@ -40,7 +40,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -configuration Debug -derivedDat
 ```
 Expected: `** BUILD SUCCEEDED **`
 
-- [ ] **Step 4: Verify the tests are green**
+- [x] **Step 4: Verify the tests are green**
 
 ```bash
 xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&1 | tail -20
@@ -57,7 +57,7 @@ Expected: `** TEST SUCCEEDED **`. If red, STOP and fix Phase 0/1 first — never
 
 Why a snapshot struct: the event-tap hot path must never read UserDefaults (latency), and the pure transformer must be testable without global state. `ScrollSettings.current(defaults:)` reads the four master-plan §6.4 keys with their exact defaults: `"scroll.enabled"` (Bool, default **true**), `"scroll.reverseTrackpad"` (Bool, default **true**), `"scroll.reverseMouse"` (Bool, default **true**), `"scroll.reverseHorizontal"` (Bool, default **false**). Defaults are applied via an `object(forKey:) == nil` check because `UserDefaults.bool(forKey:)` alone returns `false` for missing keys, which would silently flip three of the four defaults.
 
-- [ ] **Step 1: Write the failing tests — create `Tests/FuseTests/ScrollTransformerTests.swift` with exactly this content**
+- [x] **Step 1: Write the failing tests — create `Tests/FuseTests/ScrollTransformerTests.swift` with exactly this content**
 
 ```swift
 import XCTest
@@ -117,7 +117,7 @@ final class ScrollSettingsTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 xcodegen generate
@@ -125,7 +125,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 ```
 Expected: **BUILD FAILS** with `cannot find 'ScrollSettings' in scope` (a compile failure is this step's "red"). If it instead succeeds, the test file was not picked up — re-run `xcodegen generate` and check the file path.
 
-- [ ] **Step 3: Implement — create `Sources/ScrollControl/ScrollSettings.swift` with exactly this content**
+- [x] **Step 3: Implement — create `Sources/ScrollControl/ScrollSettings.swift` with exactly this content**
 
 ```swift
 import Foundation
@@ -169,7 +169,7 @@ struct ScrollSettings: Equatable {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 xcodegen generate
@@ -177,7 +177,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 ```
 Expected: `** TEST SUCCEEDED **`, and the log lists all four `ScrollSettingsTests` tests as passed alongside the pre-existing Phase 0/1 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/ScrollControl/ScrollSettings.swift Tests/FuseTests/ScrollTransformerTests.swift
@@ -199,7 +199,7 @@ The contract, in full (the tests below encode it):
 - When the governing flag is on: negate the vertical (axis-1) triplet `deltaAxis1` / `pointDeltaAxis1` / `fixedPtDeltaAxis1`; additionally negate the horizontal (axis-2) triplet only when `reverseHorizontal` is also on.
 - All six fields are raw `Int64` values as returned by `CGEvent.getIntegerValueField`; the fixed-point fields are two's-complement, so integer negation correctly negates the fixed-point value.
 
-- [ ] **Step 1: Append the failing test class to `Tests/FuseTests/ScrollTransformerTests.swift`** — add the following at the END of the file (after the closing brace of `ScrollSettingsTests`), changing nothing above it:
+- [x] **Step 1: Append the failing test class to `Tests/FuseTests/ScrollTransformerTests.swift`** — add the following at the END of the file (after the closing brace of `ScrollSettingsTests`), changing nothing above it:
 
 ```swift
 final class ScrollTransformerTests: XCTestCase {
@@ -275,7 +275,7 @@ final class ScrollTransformerTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 xcodegen generate
@@ -283,7 +283,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 ```
 Expected: **BUILD FAILS** with `cannot find 'ScrollDeltas' in scope` (and/or `cannot find 'ScrollTransformer' in scope`). That compile failure is this step's "red".
 
-- [ ] **Step 3: Implement — create `Sources/ScrollControl/ScrollTransformer.swift` with exactly this content**
+- [x] **Step 3: Implement — create `Sources/ScrollControl/ScrollTransformer.swift` with exactly this content**
 
 ```swift
 /// The six integer delta fields of a scroll-wheel CGEvent, as read with
@@ -339,7 +339,7 @@ enum ScrollTransformer {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 xcodegen generate
@@ -347,7 +347,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 ```
 Expected: `** TEST SUCCEEDED **`, and the log lists all eight `ScrollTransformerTests` tests plus the four `ScrollSettingsTests` tests as passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/ScrollControl/ScrollTransformer.swift Tests/FuseTests/ScrollTransformerTests.swift
@@ -370,7 +370,7 @@ This is OS-integration code that cannot be unit-tested (a modifying tap needs Ac
 5. **HOT PATH RULE.** Inside the callback: integer field reads, value-type math, integer field writes. No heap allocation, no logging, no UserDefaults reads. Settings come from `cachedSettings`, refreshed by observing `UserDefaults.didChangeNotification` on the main queue. The tap's run-loop source lives on the MAIN run loop, so the callback and the refresh both run on the main thread — no locking needed.
 6. **Reacting to "scroll.enabled".** When it flips to false the tap is torn down entirely (Fuse leaves the event path); when it flips to true the tap is (re)installed, re-checking permission.
 
-- [ ] **Step 1: Create `Sources/ScrollControl/ScrollEventTap.swift` with exactly this content**
+- [x] **Step 1: Create `Sources/ScrollControl/ScrollEventTap.swift` with exactly this content**
 
 ```swift
 import AppKit
@@ -556,7 +556,7 @@ final class ScrollEventTapController {
 }
 ```
 
-- [ ] **Step 2: Regenerate and build**
+- [x] **Step 2: Regenerate and build**
 
 ```bash
 xcodegen generate
@@ -564,14 +564,14 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -configuration Debug -derivedDat
 ```
 Expected: `** BUILD SUCCEEDED **`
 
-- [ ] **Step 3: Run the test suite (regression check — nothing new is tested here)**
+- [x] **Step 3: Run the test suite (regression check — nothing new is tested here)**
 
 ```bash
 xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&1 | tail -20
 ```
 Expected: `** TEST SUCCEEDED **`. Note: hosted tests launch the real app, but `AppDelegate.applicationDidFinishLaunching` returns early under XCTest (Phase 0 guard), so no tap is ever created during test runs. Behavior is human-verified in Task 2.5 after wiring.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add Sources/ScrollControl/ScrollEventTap.swift
@@ -588,7 +588,7 @@ git commit -m "feat(scroll): CGEventTap controller with permission retry and tap
 
 A SwiftUI Form bound via `@AppStorage` to the EXACT §6.4 keys. The `@AppStorage` default values match the registered defaults from Task 2.1 — they must never disagree. The view also shows a red callout (with a Grant button) when Accessibility is missing, refreshed every 2 seconds like the Phase 1 General tab, plus a footnote explaining the trackpad/Magic-Mouse grouping.
 
-- [ ] **Step 1: Create `Sources/ScrollControl/ScrollSettingsView.swift` with exactly this content**
+- [x] **Step 1: Create `Sources/ScrollControl/ScrollSettingsView.swift` with exactly this content**
 
 ```swift
 import SwiftUI
@@ -648,7 +648,7 @@ struct ScrollSettingsView: View {
 }
 ```
 
-- [ ] **Step 2: Insert the tab above the anchor in `Sources/App/SettingsRootView.swift`**
+- [x] **Step 2: Insert the tab above the anchor in `Sources/App/SettingsRootView.swift`**
 
 Find this exact block (the anchor line and the line above it):
 
@@ -670,7 +670,7 @@ Replace it with (the new tab goes ABOVE the anchor; the anchor line stays, verba
 
 Note: if another phase already inserted its own tab above the anchor, do NOT match on the `GeneralSettingsView()` lines — just insert the two `ScrollSettingsView()` lines directly above the `// FUSE:SETTINGS_TABS` line, keeping the same 12-space indentation as the anchor.
 
-- [ ] **Step 3: Regenerate, build, and run tests**
+- [x] **Step 3: Regenerate, build, and run tests**
 
 ```bash
 xcodegen generate
@@ -679,7 +679,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 ```
 Expected: `** BUILD SUCCEEDED **` then `** TEST SUCCEEDED **`.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add Sources/ScrollControl/ScrollSettingsView.swift Sources/App/SettingsRootView.swift
@@ -693,7 +693,7 @@ git commit -m "feat(scroll): scroll settings tab with per-device toggles"
 **Files:**
 - Modify: `Sources/App/AppDelegate.swift` (two anchor inserts only)
 
-- [ ] **Step 1: Insert the controller property above the `// FUSE:CONTROLLER-PROPS` anchor in `Sources/App/AppDelegate.swift`**
+- [x] **Step 1: Insert the controller property above the `// FUSE:CONTROLLER-PROPS` anchor in `Sources/App/AppDelegate.swift`**
 
 Find this exact line (4-space indentation):
 
@@ -708,7 +708,7 @@ Replace it with (property ABOVE the anchor; the anchor line stays, verbatim):
     // FUSE:CONTROLLER-PROPS
 ```
 
-- [ ] **Step 2: Insert the controller startup above the `// FUSE:CONTROLLER-START` anchor in `Sources/App/AppDelegate.swift`**
+- [x] **Step 2: Insert the controller startup above the `// FUSE:CONTROLLER-START` anchor in `Sources/App/AppDelegate.swift`**
 
 Find this exact line (8-space indentation, inside `applicationDidFinishLaunching`):
 
@@ -726,7 +726,7 @@ Replace it with (construction + start ABOVE the anchor; the anchor line stays, v
 
 This code only runs in real launches: `applicationDidFinishLaunching` returns early under XCTest (Phase 0 guard at the top of the method), so the tap never starts inside test runs. AppDelegate retains the controller for the whole app lifetime, which the tap's unretained `userInfo` pointer requires.
 
-- [ ] **Step 3: Build and run the full test suite**
+- [x] **Step 3: Build and run the full test suite**
 
 ```bash
 xcodegen generate
@@ -763,7 +763,7 @@ Ask the human to perform ALL of the following and report each result:
 
 Record the human's answers before continuing. If any item fails, STOP and debug before committing (start with the §10 TCC gotcha, then `log stream --predicate 'subsystem == "com.rgv250cc.Fuse" AND category == "scroll"' --level debug` to see tap install/remove messages).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add Sources/App/AppDelegate.swift
@@ -779,7 +779,7 @@ Precondition: `Sources/Core/PauseManager.swift` exists (Phase 1 Task 1.7). If `l
 **Files:**
 - Modify: `Sources/ScrollControl/ScrollEventTap.swift`
 
-- [ ] **Step 1: Apply five precise edits to `ScrollEventTapController`**
+- [x] **Step 1: Apply five precise edits to `ScrollEventTapController`**
 
 Edit A — add a property directly below `private var settingsObserver: NSObjectProtocol?`:
 
@@ -831,7 +831,7 @@ Edit E — add this method in the `// MARK: - Tap lifecycle` section:
     }
 ```
 
-- [ ] **Step 2: Build and run unit tests**
+- [x] **Step 2: Build and run unit tests**
 
 ```bash
 xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&1 | tail -10
@@ -845,7 +845,7 @@ pkill -x Fuse; open .build/Build/Products/Debug/Fuse.app
 ```
 With "Reverse mouse" ON and an external mouse connected: wheel scrolling is reversed → menu-bar icon → "Pause Fuse" → wheel returns to SYSTEM behavior instantly → "Paused — click to resume" → reversal returns. `log stream --predicate 'subsystem == "com.rgv250cc.Fuse"' --level debug` shows "scroll tap paused" / "scroll tap resuming".
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add Sources/ScrollControl/ScrollEventTap.swift
@@ -863,9 +863,9 @@ git commit -m "feat(scroll): remove event tap while Fuse is paused"
 - [ ] **HUMAN-VERIFY** Momentum scrolling glides naturally, no direction snap mid-glide (Task 2.5 Step 6.3).
 - [ ] **HUMAN-VERIFY** Mission Control / pinch / swipe gestures unaffected (Task 2.5 Step 6.4).
 - [ ] **HUMAN-VERIFY** With Fuse quit, scrolling returns to stock system behavior (Task 2.5 Step 6.7).
-- [ ] All unit tests green: `xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&1 | tail -20` → `** TEST SUCCEEDED **` (12 new tests: 4 ScrollSettingsTests + 8 ScrollTransformerTests).
-- [ ] `git log --oneline | head -5` shows the five Phase 2 commits on top (scroll settings snapshot, transformer, tap controller, settings tab, wiring).
-- [ ] `git status` clean; `ls Sources/ScrollControl` shows exactly: `ScrollEventTap.swift  ScrollSettings.swift  ScrollSettingsView.swift  ScrollTransformer.swift`.
+- [x] All unit tests green: `xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&1 | tail -20` → `** TEST SUCCEEDED **` (12 new tests: 4 ScrollSettingsTests + 8 ScrollTransformerTests).
+- [x] `git log --oneline | head -5` shows the five Phase 2 commits on top (scroll settings snapshot, transformer, tap controller, settings tab, wiring).
+- [x] `git status` clean; `ls Sources/ScrollControl` shows exactly: `ScrollEventTap.swift  ScrollSettings.swift  ScrollSettingsView.swift  ScrollTransformer.swift`.
 
 ## Risks & gotchas
 
@@ -880,3 +880,9 @@ git commit -m "feat(scroll): remove event tap while Fuse is paused"
 - **Momentum events must take the same path as finger scrolls.** They are continuous (`scrollWheelEventMomentumPhase != 0` events also report `scrollWheelEventIsContinuous == 1`). Special-casing them — or toggling settings mid-glide — produces a direction snap; the cached-snapshot design makes a mid-glide settings change take effect on the next event, which is acceptable and matches Scroll Reverser behavior.
 - **Theoretical Int64 overflow:** negating `Int64.min` traps, but real scroll deltas are tiny (line counts, pixels, 16.16 fixed-point) — noted only so nobody "fixes" the plain negation into something clever.
 - **Scrolling inside Fuse's own settings window is also reversed** — the tap is session-wide and Fuse does not exempt itself. Expected; matches Scroll Reverser.
+
+## Deviations
+
+- No API drift encountered; all code landed exactly as written in the plan.
+- Task 2.0 preflight commands were run against this worktree (`Fuse-worktrees/phase2-scroll`) instead of the main checkout path printed in the plan, per the parallel-worktree execution rules. All preflight checks passed.
+- Task 2.5 Steps 4–6 and Task 2.6 Step 3 (app launch + HUMAN-VERIFY) were skipped — no human available in this session; left unticked, along with the Manual verification checklist HUMAN-VERIFY items, for the integrator.
