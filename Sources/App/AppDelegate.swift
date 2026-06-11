@@ -28,6 +28,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.menu = menu
 
         // FUSE:CONTROLLER-START
+
+        // One-time coexistence check: if a known overlapping utility is running
+        // on the very first launch, open Settings so the General banner is seen.
+        let defaults = UserDefaults.standard
+        if !defaults.bool(forKey: "core.didRunBefore") {
+            defaults.set(true, forKey: "core.didRunBefore")
+            if !ConflictDetector.currentConflicts().isEmpty {
+                openSettings()
+            }
+        }
     }
 
     @objc func openSettings() {

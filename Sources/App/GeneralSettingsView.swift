@@ -6,11 +6,26 @@ struct GeneralSettingsView: View {
     @State private var hasInputMonitoring = PermissionsService.hasInputMonitoring
     @State private var micStatus = PermissionsService.microphoneStatus
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
+    @State private var conflicts = ConflictDetector.currentConflicts()
 
     private let refresh = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
 
     var body: some View {
         Form {
+            if !conflicts.isEmpty {
+                Section("Conflicting utilities detected") {
+                    ForEach(conflicts) { conflict in
+                        HStack(alignment: .top) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.yellow)
+                            VStack(alignment: .leading) {
+                                Text("\(conflict.appName) — overlaps \(conflict.fuseFeature)")
+                                Text(conflict.advice).font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+            }
             Section("Permissions") {
                 permissionRow(
                     title: "Accessibility",
@@ -58,6 +73,7 @@ struct GeneralSettingsView: View {
             hasAccessibility = PermissionsService.hasAccessibility
             hasInputMonitoring = PermissionsService.hasInputMonitoring
             micStatus = PermissionsService.microphoneStatus
+            conflicts = ConflictDetector.currentConflicts()
         }
     }
 
