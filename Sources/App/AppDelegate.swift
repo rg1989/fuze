@@ -17,6 +17,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             accessibilityDescription: "Fuse")
 
         let menu = NSMenu()
+        let pauseItem = NSMenuItem(title: "Pause Fuse", action: #selector(togglePause(_:)), keyEquivalent: "")
+        pauseItem.target = self
+        menu.addItem(pauseItem)
+        menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ","))
         // FUSE:MENU-ITEMS
         menu.addItem(.separator())
@@ -41,5 +45,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         NSApp.activate(ignoringOtherApps: true)
         settingsWindow?.makeKeyAndOrderFront(nil)
+    }
+
+    @objc private func togglePause(_ sender: NSMenuItem) {
+        PauseManager.shared.toggle()
+        let paused = PauseManager.shared.isPaused
+        sender.state = paused ? .on : .off
+        sender.title = paused ? "Paused — click to resume" : "Pause Fuse"
+        statusItem.button?.appearsDisabled = paused
     }
 }
