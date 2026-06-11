@@ -1,0 +1,108 @@
+import KeyboardShortcuts
+import SwiftUI
+
+struct VoiceSettingsView: View {
+    @AppStorage("voice.modelName") private var modelName = "openai_whisper-base.en"
+    @AppStorage("voice.language") private var language = "en"
+    @ObservedObject private var controller = VoiceController.shared
+    @State private var micStatus = PermissionsService.microphoneStatus
+    @State private var hasAccessibility = PermissionsService.hasAccessibility
+
+    private let refresh = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
+
+    private static let models: [(name: String, label: String)] = [
+        ("openai_whisper-base.en", "Base — English only, ~150 MB, fastest"),
+        ("openai_whisper-small.en", "Small — English only, better accuracy"),
+        ("openai_whisper-large-v3_turbo", "Large v3 Turbo — multilingual, best, slow first load"),
+    ]
+
+    var body: some View {
+        Form {
+            Section("Model") {
+                Picker("Whisper model", selection: $modelName) {
+                    ForEach(Self.models, id: \.name) { model in
+                        Text(model.label).tag(model.name)
+                    }
+                }
+                LabeledContent("Status") { statusView }
+                TextField("Language code", text: $language)
+                    .frame(maxWidth: 220)
+                Text("Two-letter code, e.g. \"en\", \"de\". Ignored by English-only (.en) models.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("Shortcut") {
+                KeyboardShortcuts.Recorder("Push to talk", name: .pushToTalk)
+                Text("Hold to record, release to transcribe and paste at the cursor.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("Permissions") {
+                permissionRow(
+                    title: "Microphone",
+                    detail: "Required to record audio",
+                    granted: micStatus == .authorized,
+                    grant: {
+                        PermissionsService.requestMicrophone { _ in }
+                        PermissionsService.openSystemSettings(pane: .microphone)
+                    })
+                permissionRow(
+                    title: "Accessibility",
+                    detail: "Required to paste the transcript into other apps",
+                    granted: hasAccessibility,
+                    grant: {
+                        PermissionsService.promptForAccessibility()
+                        PermissionsService.openSystemSettings(pane: .accessibility)
+                    })
+            }
+
+            Section("Test dictation") {
+                Text("Click into any text field (e.g. TextEdit), hold the shortcut, speak, release. The transcript is pasted at the cursor and your previous clipboard is restored.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+        .padding()
+        .onReceive(refresh) { _ in
+            micStatus = PermissionsService.microphoneStatus
+            hasAccessibility = PermissionsService.hasAccessibility
+        }
+    }
+
+    @ViewBuilder
+    private var statusView: some View {
+        switch controller.modelStatus {
+        case .notLoaded:
+            Text("Not loaded").foregroundStyle(.secondary)
+        case .downloading:
+            HStack(spacing: 6) {
+                ProgressView().controlSize(.small)
+                Text("Downloading / loading…")
+            }
+        case .ready:
+            Label("Ready", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+        case .failed(let message):
+            Text("Failed: \(message)").foregroundStyle(.red).lineLimit(2)
+        }
+    }
+
+    @ViewBuilder
+    private func permissionRow(title: String, detail: String, granted: Bool,
+                               grant: @escaping () -> Void) -> some View {
+        HStack {
+            VStack(alignment: .leading) {
+                Text(title)
+                Text(detail).font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Image(systemName: granted ? "checkmark.circle.fill" : "xmark.circle.fill")
+                .foregroundStyle(granted ? .green : .red)
+            if !granted {
+                Button("Grant…", action: grant)
+            }
+        }
+    }
+}
