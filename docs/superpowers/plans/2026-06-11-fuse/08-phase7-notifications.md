@@ -15,14 +15,14 @@
 **Files:**
 - None created or modified. Verification only.
 
-- [ ] **Step 1: Verify the Phase 1 Core files exist**
+- [x] **Step 1: Verify the Phase 1 Core files exist**
 
 ```bash
 ls /Users/rgv250cc/Documents/Projects/Fuse/Sources/Core
 ```
 Expected output contains ALL of: `AX.swift`, `HotkeyNames.swift`, `Log.swift`, `PasteService.swift`, `Permissions.swift`. If any is missing, STOP — Phase 1 is not complete.
 
-- [ ] **Step 2: Verify the integration anchors and the hotkey constant exist**
+- [x] **Step 2: Verify the integration anchors and the hotkey constant exist**
 
 ```bash
 cd /Users/rgv250cc/Documents/Projects/Fuse
@@ -33,7 +33,7 @@ ls Sources/Notifications 2>/dev/null || echo "Notifications dir not present yet 
 ```
 Expected: three anchor lines, then one anchor line, then the line defining `static let clearNotifications` (default ⌃⌥⌫), then `Notifications dir not present yet (expected)`. If `Sources/Notifications/` already has files, STOP and ask the user whether Phase 7 was partially executed before.
 
-- [ ] **Step 3: Verify the build and tests are green before changing anything**
+- [x] **Step 3: Verify the build and tests are green before changing anything**
 
 ```bash
 cd /Users/rgv250cc/Documents/Projects/Fuse
@@ -52,7 +52,7 @@ Expected: `** BUILD SUCCEEDED **` then `** TEST SUCCEEDED **`. If either is red,
 
 The sweep algorithm must be testable without GUI permissions, so it operates on a protocol instead of `AXElement` directly. The live `AXElement` (Phase 1, `Sources/Core/AX.swift`) conforms here; tests conform a `MockNode` in Task 7.2.
 
-- [ ] **Step 1: Write `Sources/Notifications/AXTreeNode.swift`** (complete file)
+- [x] **Step 1: Write `Sources/Notifications/AXTreeNode.swift`** (complete file)
 
 ```swift
 import Foundation
@@ -89,7 +89,7 @@ extension AXElement: AXTreeNode {
 }
 ```
 
-- [ ] **Step 2: Regenerate, build**
+- [x] **Step 2: Regenerate, build**
 
 ```bash
 cd /Users/rgv250cc/Documents/Projects/Fuse
@@ -98,7 +98,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -configuration Debug -derivedDat
 ```
 Expected: `** BUILD SUCCEEDED **`.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 cd /Users/rgv250cc/Documents/Projects/Fuse
@@ -116,7 +116,7 @@ git commit -m "feat(notifications): AXTreeNode abstraction over the accessibilit
 
 This is the TDD centerpiece of the phase. The algorithm: walk the tree breadth-first to a depth limit, collect every action whose localized description matches a "clear-ish" phrase, then perform them with a preference rule — if any "Clear All" action exists, perform ONLY those (each one nukes a whole app group in one shot); otherwise perform the individual "Close"/"Clear" actions.
 
-- [ ] **Step 1: Write the failing tests — `Tests/FuseTests/NotificationSweepTests.swift`** (complete file)
+- [x] **Step 1: Write the failing tests — `Tests/FuseTests/NotificationSweepTests.swift`** (complete file)
 
 ```swift
 import XCTest
@@ -256,7 +256,7 @@ final class NotificationSweepTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 cd /Users/rgv250cc/Documents/Projects/Fuse
@@ -265,7 +265,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 ```
 Expected: **BUILD FAILS** with `cannot find 'SweepMatch' in scope` / `cannot find 'NotificationSweep' in scope` (a compile failure is this step's "red"). Do NOT proceed if the failure is anything else.
 
-- [ ] **Step 3: Write `Sources/Notifications/NotificationSweep.swift`** (complete file)
+- [x] **Step 3: Write `Sources/Notifications/NotificationSweep.swift`** (complete file)
 
 ```swift
 import Foundation
@@ -354,7 +354,7 @@ enum NotificationSweep {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 cd /Users/rgv250cc/Documents/Projects/Fuse
@@ -363,7 +363,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 ```
 Expected: `** TEST SUCCEEDED **`, with all 9 `NotificationSweepTests` listed as passed alongside the pre-existing suites. If any sweep test fails, fix `NotificationSweep.swift` (not the tests) and re-run.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd /Users/rgv250cc/Documents/Projects/Fuse
@@ -381,7 +381,7 @@ git commit -m "feat(notifications): tested breadth-first sweep algorithm for cle
 
 OS-integration code: both files talk to the real Notification Center process via AX, so they cannot be unit-tested (hosted tests have no Accessibility grant and must not nuke the developer's notifications anyway). Implement → build; live behavior is HUMAN-VERIFIED in Tasks 7.4 and 7.5. AXDump is REQUIRED, not optional — it is the maintenance hatch for the version-brittle matchers: after a macOS update breaks clearing, the human dumps the tree, reads the new action descriptions, and updates `SweepMatch`'s phrase lists.
 
-- [ ] **Step 1: Write `Sources/Notifications/NotificationClearer.swift`** (complete file)
+- [x] **Step 1: Write `Sources/Notifications/NotificationClearer.swift`** (complete file)
 
 ```swift
 import AppKit
@@ -446,7 +446,7 @@ final class NotificationClearer {
 }
 ```
 
-- [ ] **Step 2: Write `Sources/Notifications/AXDump.swift`** (complete file)
+- [x] **Step 2: Write `Sources/Notifications/AXDump.swift`** (complete file)
 
 ```swift
 import AppKit
@@ -517,7 +517,7 @@ enum AXDump {
 }
 ```
 
-- [ ] **Step 3: Regenerate, build**
+- [x] **Step 3: Regenerate, build**
 
 ```bash
 cd /Users/rgv250cc/Documents/Projects/Fuse
@@ -526,7 +526,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -configuration Debug -derivedDat
 ```
 Expected: `** BUILD SUCCEEDED **`.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 cd /Users/rgv250cc/Documents/Projects/Fuse
@@ -544,7 +544,7 @@ git commit -m "feat(notifications): live clearer with multi-pass sweep and AX tr
 
 The controller owns: the `.clearNotifications` hotkey (⌃⌥⌫ — defined ONLY in `Sources/Core/HotkeyNames.swift`; never define new `KeyboardShortcuts.Name` constants), the status-bar menu action, and the optional auto-clear timer. It subclasses `NSObject` because the NSMenuItem target/action mechanism requires Objective-C messaging.
 
-- [ ] **Step 1: Write `Sources/Notifications/NotificationsController.swift`** (complete file)
+- [x] **Step 1: Write `Sources/Notifications/NotificationsController.swift`** (complete file)
 
 ```swift
 import AppKit
@@ -637,7 +637,7 @@ final class NotificationsController: NSObject {
 }
 ```
 
-- [ ] **Step 2: Wire the controller into `Sources/App/AppDelegate.swift` via the three anchors**
+- [x] **Step 2: Wire the controller into `Sources/App/AppDelegate.swift` via the three anchors**
 
 ORDERING NOTE (do not "simplify" this away): inside `applicationDidFinishLaunching`, the `// FUSE:MENU-ITEMS` anchor executes BEFORE `// FUSE:CONTROLLER-START`. The controller does not exist yet while the menu is being built, so the menu item is held in a property and its `target` is assigned in the CONTROLLER-START block, right after construction.
 
@@ -666,7 +666,7 @@ Edit 3 — insert directly ABOVE the line `// FUSE:CONTROLLER-START` (keep the a
         clearNotificationsMenuItem.target = notificationsController
 ```
 
-- [ ] **Step 3: Build and test** (the AppDelegate XCTestCase guard must keep tests green)
+- [x] **Step 3: Build and test** (the AppDelegate XCTestCase guard must keep tests green)
 
 ```bash
 cd /Users/rgv250cc/Documents/Projects/Fuse
@@ -701,7 +701,7 @@ Expected: lines like `clearAll finished: N action(s) performed in total` with N 
 
 If step 3/4 clears nothing (count stays 0): the matchers need recalibration for this macOS version — finish Task 7.5 first (it adds the dump button), run the dump, and follow the recalibration procedure in `## Risks & gotchas`. Record a Deviation.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd /Users/rgv250cc/Documents/Projects/Fuse
@@ -717,7 +717,7 @@ git commit -m "feat(notifications): controller with hotkey, menu item, and auto-
 - Create: `Sources/Notifications/NotificationsSettingsView.swift`
 - Modify: `Sources/App/SettingsRootView.swift` (anchor insert only)
 
-- [ ] **Step 1: Write `Sources/Notifications/NotificationsSettingsView.swift`** (complete file)
+- [x] **Step 1: Write `Sources/Notifications/NotificationsSettingsView.swift`** (complete file)
 
 ```swift
 import KeyboardShortcuts
@@ -810,7 +810,7 @@ struct NotificationsSettingsView: View {
 }
 ```
 
-- [ ] **Step 2: Add the tab in `Sources/App/SettingsRootView.swift`**
+- [x] **Step 2: Add the tab in `Sources/App/SettingsRootView.swift`**
 
 Insert directly ABOVE the line `// FUSE:SETTINGS_TABS` (keep the anchor line; do not touch tabs other phases may already have inserted above it):
 
@@ -819,7 +819,7 @@ Insert directly ABOVE the line `// FUSE:SETTINGS_TABS` (keep the anchor line; do
                 .tabItem { Label("Notifications", systemImage: "bell.badge") }
 ```
 
-- [ ] **Step 3: Build and test**
+- [x] **Step 3: Build and test**
 
 ```bash
 cd /Users/rgv250cc/Documents/Projects/Fuse
@@ -847,7 +847,7 @@ osascript -e 'display notification "world" with title "Fuse QA"'
 5. **If the descriptions on this macOS 26.x install differ** (different wording, different language): add the exact strings seen in the dump to `SweepMatch.clearAllPhrases` / `SweepMatch.closePhrases` in `Sources/Notifications/NotificationSweep.swift` (lowercase), add one matcher assertion per new phrase to `NotificationSweepTests`, re-run the tests, and record a Deviation. Then redo Task 7.4 Step 4.
 6. Click "Clear now" → expected caption "Performed N clear action(s)" with N ≥ 1 and the notifications disappear.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd /Users/rgv250cc/Documents/Projects/Fuse
@@ -887,7 +887,7 @@ Ask the human to:
 3. Re-enable Fuse in the Accessibility list. If clearing still fails afterwards, remove Fuse from the list entirely and re-add `.build/Build/Products/Debug/Fuse.app` (TCC signature cache, master plan §10), then relaunch.
 4. Press **⌃⌥⌫** with a test notification posted. Expected: clearing works again.
 
-- [ ] **Step 4: Final green run**
+- [x] **Step 4: Final green run**
 
 ```bash
 cd /Users/rgv250cc/Documents/Projects/Fuse
@@ -904,7 +904,7 @@ Precondition: `Sources/Core/PauseManager.swift` exists (Phase 1 Task 1.7). Seman
 **Files:**
 - Modify: `Sources/Notifications/NotificationsController.swift`
 
-- [ ] **Step 1: Gate the timer callback.** In `rebuildAutoClearTimer()`, replace:
+- [x] **Step 1: Gate the timer callback.** In `rebuildAutoClearTimer()`, replace:
 
 ```swift
         let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
@@ -921,7 +921,7 @@ with:
         }
 ```
 
-- [ ] **Step 2: Build and run unit tests**
+- [x] **Step 2: Build and run unit tests**
 
 ```bash
 xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&1 | tail -10
@@ -932,7 +932,7 @@ Expected: `** TEST SUCCEEDED **`.
 
 Enable auto-clear at 5 minutes; post a test notification (`osascript -e 'display notification "pause test" with title "Fuse QA"'`); "Pause Fuse"; wait past the tick → notification SURVIVES; while still paused, click the status-menu "Clear Notifications" item → it clears (explicit intent honored); resume.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add Sources/Notifications/NotificationsController.swift
@@ -952,8 +952,8 @@ git commit -m "feat(notifications): auto-clear timer no-ops while Fuse is paused
 - [ ] **HUMAN-VERIFY** Zero notifications → silent no-op, log shows 0 (Task 7.6 Step 1).
 - [ ] **HUMAN-VERIFY** Auto-clear at a 5-minute interval clears an unattended notification; default remains OFF (Task 7.6 Step 2).
 - [ ] **HUMAN-VERIFY** Revoked Accessibility → prompt, no crash; re-grant restores function (Task 7.6 Step 3).
-- [ ] All unit tests green: `xcodebuild ... test` → `** TEST SUCCEEDED **` (includes the 9 `NotificationSweepTests`).
-- [ ] `git log --oneline | head -5` shows the five Phase 7 commits on top.
+- [x] All unit tests green: `xcodebuild ... test` → `** TEST SUCCEEDED **` (includes the 9 `NotificationSweepTests`).
+- [x] `git log --oneline | head -5` shows the five Phase 7 commits on top.
 
 ## Risks & gotchas
 
@@ -966,3 +966,8 @@ git commit -m "feat(notifications): auto-clear timer no-ops while Fuse is paused
 - **`UserDefaults.didChangeNotification` fires for every default of every feature.** `rebuildAutoClearTimer()` must keep its early-return guard or unrelated settings changes churn the timer constantly.
 - **osascript test notifications** appear under the Script Editor identity; they show nothing if Script Editor's notifications are disabled or styled "None" — fix in System Settings → Notifications before concluding the feature is broken.
 - **Auto-clear is destructive by design** — it dismisses notifications the user never saw. The default ships OFF; do not change it.
+
+## Deviations
+
+- No API drift: `AXElement` (Sources/Core/AX.swift), `PermissionsService`, `Log.notifications`, `PauseManager`, and the `.clearNotifications` hotkey all matched the plan exactly; every file was written verbatim from the plan.
+- All HUMAN-VERIFY steps (Tasks 7.4 Step 4, 7.5 Step 4, 7.6 Steps 1–3, 7.7 Step 3, and the Manual verification checklist) were SKIPPED — this run was non-interactive with no GUI/Accessibility access, so live behavior against Notification Center is unverified. The full unit suite (15 pre-existing + 9 NotificationSweepTests = 24) is green.
