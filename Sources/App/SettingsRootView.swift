@@ -5,6 +5,8 @@ struct SettingsRootView: View {
         TabView {
             GeneralSettingsView()
                 .tabItem { Label("General", systemImage: "gearshape") }
+            TilingSettingsView()
+                .tabItem { Label("Tiling", systemImage: "rectangle.split.2x1") }
             // FUSE:SETTINGS_TABS
         }
         .frame(minWidth: 620, minHeight: 520)
