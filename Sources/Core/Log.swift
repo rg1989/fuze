@@ -7,5 +7,6 @@ enum Log {
     static let clipboard = Logger(subsystem: "com.rgv250cc.Fuse", category: "clipboard")
     static let voice = Logger(subsystem: "com.rgv250cc.Fuse", category: "voice")
     static let downloader = Logger(subsystem: "com.rgv250cc.Fuse", category: "downloader")
+    static let notes = Logger(subsystem: "com.rgv250cc.Fuse", category: "notes")
     static let notifications = Logger(subsystem: "com.rgv250cc.Fuse", category: "notifications")
 }

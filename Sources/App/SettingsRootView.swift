@@ -17,6 +17,8 @@ struct SettingsRootView: View {
                 .tabItem { Label("Downloads", systemImage: "arrow.down.circle") }
             NotificationsSettingsView()
                 .tabItem { Label("Notifications", systemImage: "bell.badge") }
+            NotesSettingsView()
+                .tabItem { Label("Notes", systemImage: "note.text") }
             // FUSE:SETTINGS_TABS
         }
         .frame(minWidth: 620, minHeight: 520)

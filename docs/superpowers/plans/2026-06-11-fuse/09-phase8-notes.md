@@ -48,7 +48,7 @@ New files: `Sources/Notes/{NoteModels,NoteStore,MarkdownExporter,BlockImport,Not
 
 **Files:** none (verification only).
 
-- [ ] **Step 1: Verify Phase 1 files, all four anchors, and the hotkey constant exist**
+- [x] **Step 1: Verify Phase 1 files, all four anchors, and the hotkey constant exist**
 
 ```bash
 ls Sources/Core
@@ -69,7 +69,7 @@ Expected:
 
 If anything in items 1–4 is missing, STOP — Phases 0–1 are incomplete.
 
-- [ ] **Step 2: Verify build and tests are green before touching anything**
+- [x] **Step 2: Verify build and tests are green before touching anything**
 
 ```bash
 xcodegen generate
@@ -88,7 +88,7 @@ Expected: `** BUILD SUCCEEDED **`, then `** TEST SUCCEEDED **`. If red, STOP and
 
 Core's `Log` enum has loggers for every feature EXCEPT notes. Add exactly one line after the `downloader` line.
 
-- [ ] **Step 1: Read `Sources/Core/Log.swift`, then insert the `notes` logger**
+- [x] **Step 1: Read `Sources/Core/Log.swift`, then insert the `notes` logger**
 
 Insert this single line directly AFTER the line containing `static let downloader`:
 
@@ -115,7 +115,7 @@ enum Log {
 
 If the on-disk file differs from this baseline (another phase may have touched it), do NOT overwrite it — only add the single `notes` line after `downloader`, preserving everything else.
 
-- [ ] **Step 2: Build, test, commit**
+- [x] **Step 2: Build, test, commit**
 
 ```bash
 xcodebuild -project Fuse.xcodeproj -scheme Fuse -configuration Debug -derivedDataPath .build build 2>&1 | tail -5
@@ -137,7 +137,7 @@ Expected: `** BUILD SUCCEEDED **`, then `** TEST SUCCEEDED **`. (No `xcodegen ge
 
 Two tables: `note` (title, timestamps, pin flag) and `noteBlock` (ordered blocks belonging to a note; `noteId REFERENCES note(id) ON DELETE CASCADE`; index on `(noteId, orderIndex)`). `orderIndex` is ALWAYS kept contiguous `0..n-1` per note — append assigns `max+1`, move/delete rewrite the whole sequence. Every block mutation "touches" the owning note's `updatedAt` so the sidebar sorts recently-edited notes first.
 
-- [ ] **Step 1: Write the failing tests — `Tests/FuseTests/NoteStoreTests.swift`**
+- [x] **Step 1: Write the failing tests — `Tests/FuseTests/NoteStoreTests.swift`**
 
 ```swift
 import XCTest
@@ -269,7 +269,7 @@ final class NoteStoreTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 xcodegen generate
@@ -278,7 +278,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 
 Expected: **BUILD FAILS** with `cannot find 'NoteStore' in scope` (and `cannot find type 'Note'`). A compile failure is this step's "red".
 
-- [ ] **Step 3: Write `Sources/Notes/NoteModels.swift`**
+- [x] **Step 3: Write `Sources/Notes/NoteModels.swift`**
 
 ```swift
 import Foundation
@@ -319,7 +319,7 @@ struct NoteBlock: Identifiable, Equatable, Codable, FetchableRecord, MutablePers
 }
 ```
 
-- [ ] **Step 4: Write `Sources/Notes/NoteStore.swift`**
+- [x] **Step 4: Write `Sources/Notes/NoteStore.swift`**
 
 ```swift
 import Foundation
@@ -504,7 +504,7 @@ final class NoteStore {
 }
 ```
 
-- [ ] **Step 5: Run tests to verify they pass**
+- [x] **Step 5: Run tests to verify they pass**
 
 ```bash
 xcodegen generate
@@ -513,7 +513,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 
 Expected: `** TEST SUCCEEDED **`, all 9 `NoteStoreTests` passed and every pre-existing test still green. (Hosted tests launch Fuse.app, but the `XCTestCase` guard in `applicationDidFinishLaunching` keeps all controllers off during test runs.)
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add Sources/Notes/NoteModels.swift Sources/Notes/NoteStore.swift Tests/FuseTests/NoteStoreTests.swift
@@ -530,7 +530,7 @@ git commit -m "feat(notes): GRDB note store with ordered blocks, search, and pin
 
 Pure function, deterministic output. Rendering rules: title (if non-empty) → `# <title>`; text → verbatim; code → fenced block with the block's language after the opening fence (bare fence when language is `""`); link → `<url>` autolink form; image → the literal line `> *[image block — not exported]*`. Sections are joined by ONE blank line; the result ends with exactly ONE trailing newline. WARNING: the image placeholder contains an em dash (`—`, U+2014) — implementation and tests must match byte-for-byte; copy both from this plan.
 
-- [ ] **Step 1: Write the failing tests — `Tests/FuseTests/MarkdownExporterTests.swift`**
+- [x] **Step 1: Write the failing tests — `Tests/FuseTests/MarkdownExporterTests.swift`**
 
 Expected strings are built from line arrays joined with `"\n"` — a trailing `""` element produces the single trailing newline unambiguously.
 
@@ -588,7 +588,7 @@ final class MarkdownExporterTests: XCTestCase {
 }
 ````
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 xcodegen generate
@@ -597,7 +597,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 
 Expected: **BUILD FAILS** with `cannot find 'MarkdownExporter' in scope`.
 
-- [ ] **Step 3: Write `Sources/Notes/MarkdownExporter.swift`**
+- [x] **Step 3: Write `Sources/Notes/MarkdownExporter.swift`**
 
 ````swift
 import Foundation
@@ -634,7 +634,7 @@ enum MarkdownExporter {
 }
 ````
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 xcodegen generate
@@ -643,7 +643,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 
 Expected: `** TEST SUCCEEDED **`, all 4 `MarkdownExporterTests` passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/Notes/MarkdownExporter.swift Tests/FuseTests/MarkdownExporterTests.swift
@@ -660,7 +660,7 @@ git commit -m "feat(notes): deterministic Markdown exporter"
 
 Pure decision logic for the "+ From Clipboard" button: given the pasteboard's available type strings and its plain string (if any), decide which `BlockKind` to create. Priority: **image** (`public.png` or `public.tiff` present) > **link** (string parses as an http/https URL with a host and contains no whitespace) > **text**. Returns `nil` when there is nothing usable (no image data AND no non-empty string). **Code blocks are NEVER auto-detected** — heuristics misfire; the user converts a block to code manually via the block's kind menu (Task 8.6).
 
-- [ ] **Step 1: Write the failing tests — `Tests/FuseTests/BlockImportTests.swift`**
+- [x] **Step 1: Write the failing tests — `Tests/FuseTests/BlockImportTests.swift`**
 
 ```swift
 import XCTest
@@ -708,7 +708,7 @@ final class BlockImportTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 xcodegen generate
@@ -717,7 +717,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 
 Expected: **BUILD FAILS** with `cannot find 'BlockImport' in scope`.
 
-- [ ] **Step 3: Write `Sources/Notes/BlockImport.swift`**
+- [x] **Step 3: Write `Sources/Notes/BlockImport.swift`**
 
 ```swift
 import Foundation
@@ -754,7 +754,7 @@ enum BlockImport {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 xcodegen generate
@@ -763,7 +763,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 
 Expected: `** TEST SUCCEEDED **`, all 8 `BlockImportTests` passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/Notes/BlockImport.swift Tests/FuseTests/BlockImportTests.swift
@@ -779,7 +779,7 @@ git commit -m "feat(notes): clipboard block-import decision logic"
 
 The panel is **non-activating**: it takes keyboard focus WITHOUT activating Fuse, so the previously frontmost app stays active-looking (its name stays in the menu bar) while the user types into the notes panel — exactly like Spotlight. This cannot be unit-tested; this task is implement → build → verify later in Task 8.7's HUMAN-VERIFY.
 
-- [ ] **Step 1: Write `Sources/Notes/NotesPanel.swift`**
+- [x] **Step 1: Write `Sources/Notes/NotesPanel.swift`**
 
 ```swift
 import AppKit
@@ -815,7 +815,7 @@ final class NotesPanel: NSPanel {
 }
 ```
 
-- [ ] **Step 2: Regenerate, build, test, commit**
+- [x] **Step 2: Regenerate, build, test, commit**
 
 ```bash
 xcodegen generate
@@ -836,7 +836,7 @@ Expected: `** BUILD SUCCEEDED **`, then `** TEST SUCCEEDED **` (no new tests; no
 
 Layout: an `HStack`. LEFT column (~200 pt): search field, "New Note" button, list of notes (title or "Untitled", pin indicator, relative updatedAt; context menu with Pin/Unpin and Delete-with-confirmation). RIGHT column: large title field (debounced rename), scrolling list of block views, bottom toolbar with "+ Text", "+ Code", "+ From Clipboard", and "Copy as Markdown". Every block has a hover toolbar: kind label, Copy, ▲, ▼, delete, and (text/code only) a convert menu. Edits autosave after a 0.5 s debounce. All store calls go through `NotesViewModel`; every structural mutation is followed by a reload so the UI always mirrors the database. Plain `ObservableObject` (no `@MainActor` — matches the Phase 4 view-model pattern; everything runs on the main thread anyway).
 
-- [ ] **Step 1: Write `Sources/Notes/NotesPanelView.swift`**
+- [x] **Step 1: Write `Sources/Notes/NotesPanelView.swift`**
 
 ```swift
 import AppKit
@@ -1350,7 +1350,7 @@ struct BlockView: View {
 }
 ```
 
-- [ ] **Step 2: Regenerate, build, test, commit**
+- [x] **Step 2: Regenerate, build, test, commit**
 
 ```bash
 xcodegen generate
@@ -1372,7 +1372,7 @@ Expected: `** BUILD SUCCEEDED **`, then `** TEST SUCCEEDED **` (no new tests; th
 
 The controller owns the store (via `NoteStore.shared`), the view model, the lazily created panel, the `.toggleNotesPanel` hotkey, the Esc key monitor, and the auto-hide-on-resign-key rule (`"notes.panelPinned"`). If the store can't open, the feature stays inert: the hotkey and menu item still exist but show an alert.
 
-- [ ] **Step 1: Write `Sources/Notes/NotesController.swift`**
+- [x] **Step 1: Write `Sources/Notes/NotesController.swift`**
 
 ```swift
 import AppKit
@@ -1492,7 +1492,7 @@ final class NotesController {
 }
 ```
 
-- [ ] **Step 2: Wire into `Sources/App/AppDelegate.swift`** — three anchor edits, nothing else.
+- [x] **Step 2: Wire into `Sources/App/AppDelegate.swift`** — three anchor edits, nothing else.
 
 ORDERING WARNING (do not "simplify" this away): inside Phase 0's `applicationDidFinishLaunching`, the `// FUSE:MENU-ITEMS` anchor executes BEFORE `// FUSE:CONTROLLER-START`. The controller does not exist yet while the menu is being built, so a `target = notesController` assignment at MENU-ITEMS would assign nil and the menu item would stay permanently disabled. Solution (the same pattern other phases use): hold the menu item in a property at MENU-ITEMS, then assign its `target` AND `action` at CONTROLLER-START, right after constructing the controller.
 
@@ -1524,7 +1524,7 @@ Edit 3 — find the line containing exactly `// FUSE:CONTROLLER-START` and inser
 
 (NSMenu only enables an item once it has both a target and an action — assigning both here, after construction, is what makes the "Notes" item clickable. The `XCTestCase` guard at the top of `applicationDidFinishLaunching` keeps all of this off during hosted test runs — do not remove it.)
 
-- [ ] **Step 3: Regenerate, build, test**
+- [x] **Step 3: Regenerate, build, test**
 
 ```bash
 xcodegen generate
@@ -1556,7 +1556,7 @@ Ask the human to perform ALL of the following and report each result. STOP and d
 12. **Search by block content:** reopen, type a word that exists only inside the code block into the search field — the note stays listed; type garbage — the list empties.
 13. **Delete note:** right-click the note in the sidebar → "Delete…" — a confirmation appears naming the note; confirming removes it.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/Notes/NotesController.swift Sources/App/AppDelegate.swift
@@ -1571,7 +1571,7 @@ git commit -m "feat(notes): controller wiring, toggle hotkey, and status-bar men
 - Create: `Sources/Notes/NotesSettingsView.swift`
 - Modify: `Sources/App/SettingsRootView.swift` (anchor insert ONLY)
 
-- [ ] **Step 1: Write `Sources/Notes/NotesSettingsView.swift`**
+- [x] **Step 1: Write `Sources/Notes/NotesSettingsView.swift`**
 
 ```swift
 import AppKit
@@ -1660,7 +1660,7 @@ struct NotesSettingsView: View {
 }
 ```
 
-- [ ] **Step 2: Wire into `Sources/App/SettingsRootView.swift`** — one anchor edit, nothing else.
+- [x] **Step 2: Wire into `Sources/App/SettingsRootView.swift`** — one anchor edit, nothing else.
 
 Find the line containing exactly `// FUSE:SETTINGS_TABS` and insert two lines ABOVE it (keep the anchor line), so the file reads:
 
@@ -1670,7 +1670,7 @@ Find the line containing exactly `// FUSE:SETTINGS_TABS` and insert two lines AB
             // FUSE:SETTINGS_TABS
 ```
 
-- [ ] **Step 3: Regenerate, build, test**
+- [x] **Step 3: Regenerate, build, test**
 
 ```bash
 xcodegen generate
@@ -1694,7 +1694,7 @@ Ask the human to perform ALL of the following and report each result.
 4. **Export-all:** click "Export all notes as Markdown…", pick a scratch folder. The inline text reports the exported count; the folder contains one `.md` per note named `<title-or-Untitled>-<id>.md`; opening the file for the test note shows the `# title` heading, the text, a fenced ```swift code block, the `<https://…>` autolink, and the image placeholder line.
 5. **Copy as Markdown:** in the panel, click "Copy as Markdown", paste into TextEdit (as plain text) — same Markdown shape as the exported file.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/Notes/NotesSettingsView.swift Sources/App/SettingsRootView.swift
@@ -1713,8 +1713,8 @@ git commit -m "feat(notes): settings tab with hotkey recorder, pinning, and Mark
 - [ ] **HUMAN-VERIFY** Search finds a note by text that exists only inside a code block.
 - [ ] **HUMAN-VERIFY** "Copy as Markdown" → paste shows the fenced code block; settings "Export all notes as Markdown…" writes one `.md` file per note and reports the count inline.
 - [ ] **HUMAN-VERIFY** Deleting a note asks for confirmation and removes the note with all its blocks (cascade).
-- [ ] All unit tests green: `xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&1 | tail -20` → `** TEST SUCCEEDED **` (21 new tests: 9 NoteStore + 4 MarkdownExporter + 8 BlockImport).
-- [ ] `git log --oneline | head -8` shows the eight Phase 8 commits on top.
+- [x] All unit tests green: `xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&1 | tail -20` → `** TEST SUCCEEDED **` (21 new tests: 9 NoteStore + 4 MarkdownExporter + 8 BlockImport).
+- [x] `git log --oneline | head -8` shows the eight Phase 8 commits on top.
 
 ## Risks & gotchas
 
@@ -1730,3 +1730,8 @@ git commit -m "feat(notes): settings tab with hotkey recorder, pinning, and Mark
 - **MENU-ITEMS runs before CONTROLLER-START.** The "Notes" menu item is created with `action: nil` and only becomes clickable when Task 8.7 Edit 3 assigns `target` + `action` after the controller exists. If the item appears grayed out, that assignment is missing or misplaced.
 - **No Accessibility permission needed for this phase.** KeyboardShortcuts uses Carbon hotkeys and the Copy buttons only write the pasteboard. If the hotkey does nothing, check for a conflicting ⌃⌥M binding in another app, not permissions.
 - **Hosted unit tests launch the real app.** The `XCTestCase` guard in `applicationDidFinishLaunching` (Phase 0) keeps `NotesController` from starting during test runs. Keep it.
+
+## Deviations
+
+- None. All code compiled against GRDB as written in the plan (no API drift); the em dash placeholder (U+2014) was copied byte-for-byte into both `MarkdownExporter.swift` and `MarkdownExporterTests.swift` and verified via hexdump (`e2 80 94`).
+- All HUMAN-VERIFY steps (Task 8.7 Step 4, Task 8.8 Step 4, and the end-of-phase manual checklist) were SKIPPED — no human available in this execution environment; the app was never launched. These remain unticked for the integrator.

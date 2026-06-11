@@ -12,6 +12,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var downloaderController: DownloaderController!
     private var notificationsController: NotificationsController!
     private var clearNotificationsMenuItem: NSMenuItem!
+    private var notesController: NotesController!
+    private var notesMenuItem: NSMenuItem!
     // FUSE:CONTROLLER-PROPS
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -45,6 +47,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             action: #selector(NotificationsController.clearNow),
             keyEquivalent: "")
         menu.addItem(clearNotificationsMenuItem)
+        notesMenuItem = NSMenuItem(title: "Notes", action: nil, keyEquivalent: "")
+        menu.addItem(notesMenuItem)
         // FUSE:MENU-ITEMS
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit Fuse", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
@@ -63,6 +67,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         notificationsController = NotificationsController()
         notificationsController.start()
         clearNotificationsMenuItem.target = notificationsController
+        notesController = NotesController()
+        notesController.start()
+        notesMenuItem.target = notesController
+        notesMenuItem.action = #selector(NotesController.toggleFromMenu)
         // FUSE:CONTROLLER-START
 
         // One-time coexistence check: if a known overlapping utility is running
