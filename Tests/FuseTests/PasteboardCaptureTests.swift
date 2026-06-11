@@ -71,4 +71,23 @@ final class PasteboardCaptureTests: XCTestCase {
         XCTAssertEqual(result.kind, "other")
         XCTAssertEqual(result.preview, "com.example.custom")
     }
+
+    func testThumbnailScalesLongestSideTo200AndNeverUpscales() throws {
+        func solidImage(_ w: CGFloat, _ h: CGFloat) -> NSImage {
+            let image = NSImage(size: NSSize(width: w, height: h))
+            image.lockFocus()
+            NSColor.systemRed.setFill()
+            NSRect(x: 0, y: 0, width: w, height: h).fill()
+            image.unlockFocus()
+            return image
+        }
+        let big = try XCTUnwrap(NSImage(data: XCTUnwrap(
+            PasteboardWatcher.thumbnailPNG(from: solidImage(400, 100), maxSide: 200))))
+        XCTAssertEqual(big.size.width, 200, accuracy: 2)
+        XCTAssertEqual(big.size.height, 50, accuracy: 2)
+        let small = try XCTUnwrap(NSImage(data: XCTUnwrap(
+            PasteboardWatcher.thumbnailPNG(from: solidImage(80, 60), maxSide: 200))))
+        XCTAssertEqual(small.size.width, 80, accuracy: 2)   // no upscaling
+        XCTAssertEqual(small.size.height, 60, accuracy: 2)
+    }
 }

@@ -56,3 +56,125 @@ enum CaptureClassifier {
         return true
     }
 }
+
+/// Polls NSPasteboard.general every 0.3 s and persists changes to ClipboardStore.
+/// Respects the "clipboard.enabled" UserDefaults key. start()/stop() control it.
+final class PasteboardWatcher {
+    /// Bounded allowlist of representation types we persist (plus the item's
+    /// own first — highest-fidelity — type, added per capture).
+    static let allowedTypes: Set<String> = [
+        "public.utf8-plain-text", "public.rtf", "public.html",
+        "public.png", "public.tiff", "public.file-url",
+    ]
+    static let maxItemBytes = 10 * 1024 * 1024   // skip items above 10 MB total
+
+    private let store: ClipboardStore
+    private let pasteboard = NSPasteboard.general
+    private var timer: Timer?
+    private var lastChangeCount: Int
+
+    init(store: ClipboardStore) {
+        self.store = store
+        self.lastChangeCount = NSPasteboard.general.changeCount
+    }
+
+    func start() {
+        guard timer == nil else { return }
+        lastChangeCount = pasteboard.changeCount   // never capture pre-existing content
+        let t = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
+            self?.poll()
+        }
+        t.tolerance = 0.1
+        timer = t
+        Log.clipboard.info("pasteboard watcher started")
+    }
+
+    func stop() {
+        timer?.invalidate()
+        timer = nil
+    }
+
+    private func poll() {
+        guard UserDefaults.standard.bool(forKey: "clipboard.enabled") else { return }
+        let count = pasteboard.changeCount
+        guard count != lastChangeCount else { return }
+        lastChangeCount = count
+        capture()
+    }
+
+    private func capture() {
+        let typeStrings = Set((pasteboard.types ?? []).map(\.rawValue))
+        guard CaptureClassifier.shouldCapture(types: typeStrings) else {
+            Log.clipboard.debug("skipping pasteboard change (concealed/transient/internal)")
+            return
+        }
+        guard let firstItem = pasteboard.pasteboardItems?.first else { return }
+
+        // Representations from the first pasteboard item, bounded by the allowlist
+        // plus that item's first (highest-fidelity) type. Skip oversized items.
+        var wanted = Self.allowedTypes
+        if let firstType = firstItem.types.first { wanted.insert(firstType.rawValue) }
+        var representations: [(type: String, data: Data)] = []
+        var totalBytes = 0
+        for type in firstItem.types where wanted.contains(type.rawValue) {
+            guard let data = firstItem.data(forType: type) else { continue }
+            totalBytes += data.count
+            representations.append((type: type.rawValue, data: data))
+        }
+        guard !representations.isEmpty else { return }
+        guard totalBytes <= Self.maxItemBytes else {
+            Log.clipboard.info("skipping oversized clipboard item (\(totalBytes) bytes)")
+            return
+        }
+
+        let plainString = pasteboard.string(forType: .string)
+        let fileURLs = (pasteboard.readObjects(forClasses: [NSURL.self],
+                                               options: [.urlReadingFileURLsOnly: true]) as? [URL]) ?? []
+        var imagePixelSize: CGSize?
+        var thumbnail: Data?
+        if typeStrings.contains("public.png") || typeStrings.contains("public.tiff") {
+            let imageData = firstItem.data(forType: NSPasteboard.PasteboardType("public.png"))
+                ?? firstItem.data(forType: NSPasteboard.PasteboardType("public.tiff"))
+            if let imageData, let image = NSImage(data: imageData) {
+                if let rep = image.representations.first {
+                    imagePixelSize = CGSize(width: rep.pixelsWide, height: rep.pixelsHigh)
+                }
+                thumbnail = Self.thumbnailPNG(from: image, maxSide: 200)
+            }
+        }
+
+        let (kind, preview) = CaptureClassifier.classify(types: typeStrings, plainString: plainString,
+                                                         fileURLs: fileURLs, imagePixelSize: imagePixelSize)
+        do {
+            try store.save(kind: kind, preview: preview, thumbnail: thumbnail,
+                           sourceApp: NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
+                           contentHash: ClipboardStore.hash(representations: representations),
+                           representations: representations)
+            let configured = UserDefaults.standard.integer(forKey: "clipboard.maxItems")
+            try store.prune(keeping: configured > 0 ? configured : 500)
+            Log.clipboard.debug("captured \(kind, privacy: .public) item")
+        } catch {
+            Log.clipboard.error("capture failed: \(error.localizedDescription)")
+        }
+    }
+
+    /// Scale `image` so its longest side is ≤ maxSide (never upscales); PNG via
+    /// NSBitmapImageRep. Returns nil for degenerate images or encoding failures.
+    static func thumbnailPNG(from image: NSImage, maxSide: CGFloat) -> Data? {
+        let size = image.size
+        guard size.width > 0, size.height > 0 else { return nil }
+        let scale = min(1, maxSide / max(size.width, size.height))
+        let target = NSSize(width: max(1, floor(size.width * scale)),
+                            height: max(1, floor(size.height * scale)))
+        guard let bitmap = NSBitmapImageRep(
+            bitmapDataPlanes: nil, pixelsWide: Int(target.width), pixelsHigh: Int(target.height),
+            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+            colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0) else { return nil }
+        bitmap.size = target
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: bitmap)
+        image.draw(in: NSRect(origin: .zero, size: target), from: .zero, operation: .copy, fraction: 1)
+        NSGraphicsContext.restoreGraphicsState()
+        return bitmap.representation(using: .png, properties: [:])
+    }
+}
