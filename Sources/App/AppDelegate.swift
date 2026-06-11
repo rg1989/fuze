@@ -5,6 +5,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var settingsWindow: NSWindow?
 
+    private var downloaderController: DownloaderController!
     // FUSE:CONTROLLER-PROPS
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -22,11 +23,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(pauseItem)
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ","))
+        if downloaderController == nil { downloaderController = DownloaderController() }
+        let downloadsItem = NSMenuItem(title: "Downloads…",
+                                       action: #selector(DownloaderController.openDownloadsWindow),
+                                       keyEquivalent: "")
+        downloadsItem.target = downloaderController
+        menu.addItem(downloadsItem)
+        let clipboardDownloadItem = NSMenuItem(title: "Download URL from Clipboard",
+                                               action: #selector(DownloaderController.downloadFromClipboard),
+                                               keyEquivalent: "")
+        clipboardDownloadItem.target = downloaderController
+        menu.addItem(clipboardDownloadItem)
         // FUSE:MENU-ITEMS
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit Fuse", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         statusItem.menu = menu
 
+        if downloaderController == nil { downloaderController = DownloaderController() }
+        downloaderController.start()
         // FUSE:CONTROLLER-START
 
         // One-time coexistence check: if a known overlapping utility is running
