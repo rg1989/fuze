@@ -23,6 +23,7 @@
 | 5 | Smart video downloader (any site yt-dlp supports) | Downie | 6 | `07-phase6-downloader.md` |
 | 6 | Clear all macOS notifications via hotkey / on schedule | manual clicking | 7 | `08-phase7-notifications.md` |
 | 7 | Quick-capture notes panel: hotkey-toggled, block-based (text / code / image / link), per-block copy, Markdown export | Heynote / Apple Quick Note | 8 | `09-phase8-notes.md` |
+| 8 | Capture: hotkey screenshots + screen recordings → clipboard + history, annotation editor, video trimmer | CleanShot X | 10 | `11-phase10-capture.md` |
 | — | Packaging: signing, notarization, DMG, final QA | — | 9 | `10-phase9-packaging.md` |
 
 ## 2. Architecture decisions (locked — do not revisit during execution)
@@ -85,7 +86,8 @@ Fuse/
 │   ├── Voice/                           # Phase 5
 │   ├── Downloader/                      # Phase 6
 │   ├── Notifications/                   # Phase 7
-│   └── Notes/                           # Phase 8
+│   ├── Notes/                           # Phase 8
+│   └── Capture/                         # Phase 10
 ├── Tests/FuseTests/                     # XCTest unit tests (hosted in Fuse.app)
 ├── Resources/                           # Assets.xcassets, .gitkeep
 ├── scripts/                             # packaging helpers (Phase 8)
@@ -189,6 +191,8 @@ enum ConflictDetector {
 | `.tileCenter` | ⌃⌥C | center, keep size |
 | `.tileNextDisplay` | ⌃⌥N | move window to next screen |
 | `.toggleNotesPanel` | ⌃⌥M | show/hide the quick-notes panel |
+| `.captureRegion` | ⌃⌥S | interactive screenshot (region/window) → save + clipboard + editor |
+| `.toggleRecording` | ⌃⌥R | start (region picker) / stop screen recording |
 
 ### 6.4 UserDefaults keys (convention: `"<feature>.<name>"`)
 
@@ -211,6 +215,9 @@ enum ConflictDetector {
 | `notifications.autoClearIntervalMinutes` | Int | 30 |
 | `notes.panelPinned` | Bool | false |
 | `clipboard.excludedApps` | [String] (via `stringArray(forKey:)`) | [] |
+| `capture.saveFolderPath` | String | `NSHomeDirectory() + "/Desktop"` |
+| `capture.copyToClipboard` | Bool | true |
+| `capture.openEditorAfter` | Bool | true |
 | `core.didRunBefore` | Bool | false |
 
 ### 6.5 Identity
