@@ -8,6 +8,7 @@ final class CaptureController {
     private let screenshots = ScreenshotService()
     private let recorder = RecordingService()
     private let hud = RecHUD()
+    private var imageEditors: [ImageEditorWindowController] = []
 
     /// Set by AppDelegate so the title can swap with recording state.
     weak var recordingMenuItem: NSMenuItem?
@@ -118,8 +119,15 @@ final class CaptureController {
     private func openInEditor(_ url: URL, kind: CaptureKind) {
         switch kind {
         case .screenshot:
-            // Replaced in Task 10.6 with the built-in annotation editor.
-            NSWorkspace.shared.open(url)
+            guard let editor = ImageEditorWindowController(fileURL: url) else {
+                NSWorkspace.shared.open(url)   // unreadable PNG — fall back
+                return
+            }
+            editor.onClose = { [weak self, weak editor] in
+                self?.imageEditors.removeAll { $0 === editor }
+            }
+            imageEditors.append(editor)
+            editor.show()
         case .recording:
             // Replaced in Task 10.7 with the built-in trimmer.
             NSWorkspace.shared.open(url)
