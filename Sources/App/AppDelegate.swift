@@ -7,6 +7,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var scrollController: ScrollEventTapController!
     private var tilingController: TilingController!
+    private var clipboardController: ClipboardController!
     // FUSE:CONTROLLER-PROPS
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -33,6 +34,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         scrollController.start()
         tilingController = TilingController()
         tilingController.start()
+        clipboardController = ClipboardController()
+        clipboardController?.start()
         // FUSE:CONTROLLER-START
 
         // One-time coexistence check: if a known overlapping utility is running
