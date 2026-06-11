@@ -15,7 +15,7 @@
 **Files:**
 - None created or modified. Verification only.
 
-- [ ] **Step 1: Verify the Core files from Phase 1 exist**
+- [x] **Step 1: Verify the Core files from Phase 1 exist**
 
 ```bash
 ls -la /Users/rgv250cc/Documents/Projects/Fuse/Sources/Core
@@ -33,7 +33,7 @@ Permissions.swift
 
 If any file is missing, STOP — Phase 1 is not complete. Do not proceed.
 
-- [ ] **Step 2: Verify the integration anchors exist**
+- [x] **Step 2: Verify the integration anchors exist**
 
 ```bash
 grep -n "FUSE:CONTROLLER-PROPS" Sources/App/AppDelegate.swift
@@ -43,7 +43,7 @@ grep -n "FUSE:SETTINGS_TABS" Sources/App/SettingsRootView.swift
 
 Expected: each grep prints exactly one matching line. If any anchor is missing, STOP — Phase 0 scaffold is broken; fix the anchor comments before continuing.
 
-- [ ] **Step 3: Verify the tiling hotkey constants exist in Core**
+- [x] **Step 3: Verify the tiling hotkey constants exist in Core**
 
 ```bash
 grep -c "tile" Sources/Core/HotkeyNames.swift
@@ -51,7 +51,7 @@ grep -c "tile" Sources/Core/HotkeyNames.swift
 
 Expected: a number ≥ 11 (the file defines `.tileLeftHalf`, `.tileRightHalf`, `.tileTopHalf`, `.tileBottomHalf`, `.tileTopLeft`, `.tileTopRight`, `.tileBottomLeft`, `.tileBottomRight`, `.tileMaximize`, `.tileCenter`, `.tileNextDisplay`). This phase NEVER defines new `KeyboardShortcuts.Name` constants — it only consumes these.
 
-- [ ] **Step 4: Verify the build and the existing tests are green**
+- [x] **Step 4: Verify the build and the existing tests are green**
 
 ```bash
 xcodegen generate
@@ -79,7 +79,7 @@ No commit for this task (nothing changed).
 - Create: `Sources/Tiling/TileGeometry.swift`
 - Test: `Tests/FuseTests/TileGeometryTests.swift`
 
-- [ ] **Step 1: Write the failing tests — create `Tests/FuseTests/TileGeometryTests.swift` with exactly this content**
+- [x] **Step 1: Write the failing tests — create `Tests/FuseTests/TileGeometryTests.swift` with exactly this content**
 
 The reference frame for all tests is `visibleFrame = (0, 0, 1600, 1000)`. Every expected rect below is exact; the helper compares each component with a tiny accuracy tolerance so CGFloat arithmetic can never cause flaky failures.
 
@@ -242,7 +242,7 @@ final class TileGeometryTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 ```bash
 xcodegen generate
@@ -251,7 +251,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 
 Expected: **BUILD FAILS** with `cannot find 'TileGeometry' in scope` (and/or `cannot find type 'TileAction' in scope`). A compile failure is this step's "red". If instead you see `** TEST SUCCEEDED **`, something already defines these types — investigate before writing any implementation.
 
-- [ ] **Step 3: Create `Sources/Tiling/TileAction.swift` with exactly this content**
+- [x] **Step 3: Create `Sources/Tiling/TileAction.swift` with exactly this content**
 
 ```swift
 /// Every tiling operation Fuse can perform. String raw values exist solely
@@ -271,7 +271,7 @@ enum TileAction: String, CaseIterable {
 }
 ```
 
-- [ ] **Step 4: Create `Sources/Tiling/TileGeometry.swift` with exactly this content**
+- [x] **Step 4: Create `Sources/Tiling/TileGeometry.swift` with exactly this content**
 
 ```swift
 import CoreGraphics
@@ -336,7 +336,7 @@ enum TileGeometry {
 }
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 ```bash
 xcodegen generate
@@ -345,7 +345,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 
 Expected: `** TEST SUCCEEDED **`, with all 26 `TileGeometryTests` methods passing alongside every pre-existing test. If any geometry assertion fails, fix `TileGeometry.swift` (the tests encode the contract; do not edit expected values).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add Sources/Tiling/TileAction.swift Sources/Tiling/TileGeometry.swift Tests/FuseTests/TileGeometryTests.swift
@@ -362,7 +362,7 @@ THE classic macOS tiling pitfall: `AXUIElement` window positions are in TOP-LEFT
 - Create: `Sources/Tiling/ScreenCoords.swift`
 - Test: `Tests/FuseTests/ScreenCoordsTests.swift`
 
-- [ ] **Step 1: Write the failing tests — create `Tests/FuseTests/ScreenCoordsTests.swift` with exactly this content**
+- [x] **Step 1: Write the failing tests — create `Tests/FuseTests/ScreenCoordsTests.swift` with exactly this content**
 
 ```swift
 import XCTest
@@ -426,7 +426,7 @@ final class ScreenCoordsTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 ```bash
 xcodegen generate
@@ -435,7 +435,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 
 Expected: **BUILD FAILS** with `cannot find 'ScreenCoords' in scope`. That compile failure is the "red".
 
-- [ ] **Step 3: Create `Sources/Tiling/ScreenCoords.swift` with exactly this content**
+- [x] **Step 3: Create `Sources/Tiling/ScreenCoords.swift` with exactly this content**
 
 ```swift
 import CoreGraphics
@@ -463,7 +463,7 @@ enum ScreenCoords {
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 ```bash
 xcodegen generate
@@ -472,7 +472,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 
 Expected: `** TEST SUCCEEDED **`, with all 6 `ScreenCoordsTests` methods passing alongside everything else.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/Tiling/ScreenCoords.swift Tests/FuseTests/ScreenCoordsTests.swift
@@ -490,7 +490,7 @@ Uses ONLY these Core APIs, by their exact Phase 1 signatures: `AXElement.applica
 **Files:**
 - Create: `Sources/Tiling/WindowMover.swift`
 
-- [ ] **Step 1: Create `Sources/Tiling/WindowMover.swift` with exactly this content**
+- [x] **Step 1: Create `Sources/Tiling/WindowMover.swift` with exactly this content**
 
 ```swift
 import AppKit
@@ -589,7 +589,7 @@ enum WindowMover {
 }
 ```
 
-- [ ] **Step 2: Regenerate, build, and run the existing tests**
+- [x] **Step 2: Regenerate, build, and run the existing tests**
 
 ```bash
 xcodegen generate
@@ -604,7 +604,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 
 Expected: `** TEST SUCCEEDED **` (no new tests; this confirms nothing regressed).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add Sources/Tiling/WindowMover.swift
@@ -621,7 +621,7 @@ git commit -m "feat(tiling): WindowMover applies tile frames via AX with clamp-r
 - Create: `Sources/Tiling/TilingController.swift`
 - Modify: `Sources/App/AppDelegate.swift` (two anchor insertions, shown exactly below)
 
-- [ ] **Step 1: Create `Sources/Tiling/TilingController.swift` with exactly this content**
+- [x] **Step 1: Create `Sources/Tiling/TilingController.swift` with exactly this content**
 
 ```swift
 import AppKit
@@ -662,7 +662,7 @@ final class TilingController {
 }
 ```
 
-- [ ] **Step 2: Wire the controller into `Sources/App/AppDelegate.swift` via the two anchors**
+- [x] **Step 2: Wire the controller into `Sources/App/AppDelegate.swift` via the two anchors**
 
 Edit 1 — find the line containing exactly `// FUSE:CONTROLLER-PROPS` and insert the property declaration immediately ABOVE it, so the file reads (other phases' properties may also be present above yours — leave them untouched):
 
@@ -681,7 +681,7 @@ Edit 2 — find the line containing exactly `// FUSE:CONTROLLER-START` (inside `
 
 Do not reference line numbers; locate both anchors by their exact comment text. Make no other changes to AppDelegate.swift.
 
-- [ ] **Step 3: Regenerate, build, run tests**
+- [x] **Step 3: Regenerate, build, run tests**
 
 ```bash
 xcodegen generate
@@ -715,7 +715,7 @@ Ask the human to perform ALL of the following and report each result:
 
 Record the human's answers before proceeding. If any step fails, STOP and debug before committing.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/Tiling/TilingController.swift Sources/App/AppDelegate.swift
@@ -732,7 +732,7 @@ A SwiftUI settings tab: enable toggle (`"tiling.enabled"`), gap slider 0–24 pt
 - Create: `Sources/Tiling/TilingSettingsView.swift`
 - Modify: `Sources/App/SettingsRootView.swift` (one anchor insertion, shown exactly below)
 
-- [ ] **Step 1: Create `Sources/Tiling/TilingSettingsView.swift` with exactly this content**
+- [x] **Step 1: Create `Sources/Tiling/TilingSettingsView.swift` with exactly this content**
 
 ```swift
 import KeyboardShortcuts
@@ -810,7 +810,7 @@ struct TilingSettingsView: View {
 }
 ```
 
-- [ ] **Step 2: Wire the tab into `Sources/App/SettingsRootView.swift` via the anchor**
+- [x] **Step 2: Wire the tab into `Sources/App/SettingsRootView.swift` via the anchor**
 
 Find the line containing exactly `// FUSE:SETTINGS_TABS` and insert the tab entry immediately ABOVE it, so the file reads (other phases' tabs may also be present above yours — leave them untouched):
 
@@ -822,7 +822,7 @@ Find the line containing exactly `// FUSE:SETTINGS_TABS` and insert the tab entr
 
 Locate the anchor by its exact comment text, never by line number. Make no other changes to SettingsRootView.swift.
 
-- [ ] **Step 3: Regenerate, build, run tests**
+- [x] **Step 3: Regenerate, build, run tests**
 
 ```bash
 xcodegen generate
@@ -853,7 +853,7 @@ Ask the human to perform ALL of the following and report each result:
 
 Record the human's answers before proceeding. If any step fails, STOP and debug before committing.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/Tiling/TilingSettingsView.swift Sources/App/SettingsRootView.swift
@@ -871,8 +871,8 @@ git commit -m "feat(tiling): settings tab with enable toggle, gap slider, and sh
 - [ ] **HUMAN-VERIFY** Gap = 10 pt visibly insets tiles from screen edges and leaves a ~10 pt seam between adjacent tiles; gap = 0 restores flush tiling; changes apply without restart.
 - [ ] **HUMAN-VERIFY** Re-recording a shortcut in the Tiling tab takes effect immediately; the "Enable window tiling" toggle gates all 11 hotkeys instantly.
 - [ ] **HUMAN-VERIFY** With Accessibility revoked, a tiling hotkey produces the system permission prompt (never a crash), and the Tiling tab shows the red callout within ~2 s.
-- [ ] All unit tests green: `xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&1 | tail -20` → `** TEST SUCCEEDED **` (includes 26 TileGeometryTests + 6 ScreenCoordsTests).
-- [ ] `git log --oneline | head -6` shows the five Phase 3 commits on top (TileGeometry, ScreenCoords, WindowMover, TilingController, settings tab).
+- [x] All unit tests green: `xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&1 | tail -20` → `** TEST SUCCEEDED **` (includes 26 TileGeometryTests + 6 ScreenCoordsTests).
+- [x] `git log --oneline | head -6` shows the five Phase 3 commits on top (TileGeometry, ScreenCoords, WindowMover, TilingController, settings tab).
 
 ## Risks & gotchas
 
@@ -884,3 +884,10 @@ git commit -m "feat(tiling): settings tab with enable toggle, gap slider, and sh
 - **Single-display `.nextDisplay`.** With one screen, `(index + 1) % 1 == 0` re-centers on the same display — harmless by design, but the two-display HUMAN-VERIFY genuinely requires two displays; record a skip note otherwise.
 - **`KeyboardShortcuts.Recorder` label API drift.** The plan uses the 2.x SwiftUI initializer `KeyboardShortcuts.Recorder("Left half", name: .tileLeftHalf)`. If the pinned package version renames the initializer, check `.build/SourcePackages/checkouts/KeyboardShortcuts/Sources/KeyboardShortcuts/Recorder.swift` and adjust the call sites minimally, recording the change under `## Deviations` per master §9.
 - **Hosted tests must never move windows.** The XCTest guard at the top of `applicationDidFinishLaunching` (Phase 0) prevents `TilingController.start()` from running during `xcodebuild test`. Never insert controller-start code outside that guard.
+
+## Deviations
+
+- **Task 3.0 Step 1 path:** the plan's `ls` command points at the main checkout (`/Users/rgv250cc/Documents/Projects/Fuse/Sources/Core`); per worktree-isolation rules the verification was performed against the same path in this worktree (`Fuse-worktrees/phase3-tiling/Sources/Core`). All five required files (plus PauseManager.swift, ConflictDetector.swift) present.
+- **TileGeometryTests count:** Task 3.1 Step 5 expects "all 26 TileGeometryTests methods", but the plan's verbatim test file defines 25 test methods. The file was created exactly as written and all 25 pass; the prose count is off by one. No code change.
+- **HUMAN-VERIFY steps skipped:** executed in a headless agent session with no human at the GUI — Task 3.4 Step 4, Task 3.5 Step 4, and the seven end-of-phase HUMAN-VERIFY checklist items remain unticked and must be verified by a human before release.
+- No API drift encountered: `KeyboardShortcuts.onKeyDown(for:)` and `KeyboardShortcuts.Recorder(_:name:)` compiled as written against the pinned 2.x package; all Core APIs matched their Phase 1 signatures exactly.
