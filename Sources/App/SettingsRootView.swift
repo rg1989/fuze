@@ -3,7 +3,7 @@ import SwiftUI
 // All settings tabs. (The old FUSE:SETTINGS_TABS anchor is retired — new
 // features add a case here and a row in `content`.)
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case general, scroll, tiling, clipboard, voice, downloads, notifications, notes
+    case general, scroll, tiling, clipboard, voice, capture, downloads, notifications, notes
 
     var id: String { rawValue }
 
@@ -14,6 +14,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .tiling: return "Tiling"
         case .clipboard: return "Clipboard"
         case .voice: return "Voice"
+        case .capture: return "Capture"
         case .downloads: return "Downloads"
         case .notifications: return "Notifications"
         case .notes: return "Notes"
@@ -27,6 +28,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .tiling: return "rectangle.split.2x1"
         case .clipboard: return "doc.on.clipboard"
         case .voice: return "mic"
+        case .capture: return "camera.viewfinder"
         case .downloads: return "arrow.down.circle"
         case .notifications: return "bell.badge"
         case .notes: return "note.text"
@@ -46,7 +48,7 @@ struct SettingsRootView: View {
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(minWidth: 720, minHeight: 560)
+        .frame(minWidth: 800, minHeight: 560)
     }
 
     private var tabBar: some View {
@@ -84,6 +86,7 @@ struct SettingsRootView: View {
         case .tiling: TilingSettingsView()
         case .clipboard: ClipboardSettingsView()
         case .voice: VoiceSettingsView()
+        case .capture: CaptureSettingsView()
         case .downloads: DownloaderSettingsView()
         case .notifications: NotificationsSettingsView()
         case .notes: NotesSettingsView()

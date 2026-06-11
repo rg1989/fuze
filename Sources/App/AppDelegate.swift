@@ -14,6 +14,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var clearNotificationsMenuItem: NSMenuItem!
     private var notesController: NotesController!
     private var notesMenuItem: NSMenuItem!
+    private var captureController: CaptureController!
+    private var captureRegionMenuItem: NSMenuItem!
+    private var recordingMenuItem: NSMenuItem!
     // FUSE:CONTROLLER-PROPS
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -49,6 +52,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(clearNotificationsMenuItem)
         notesMenuItem = NSMenuItem(title: "Notes", action: nil, keyEquivalent: "")
         menu.addItem(notesMenuItem)
+        captureRegionMenuItem = NSMenuItem(
+            title: "Capture Region",
+            action: #selector(CaptureController.captureRegionFromMenu),
+            keyEquivalent: "")
+        menu.addItem(captureRegionMenuItem)
+        recordingMenuItem = NSMenuItem(
+            title: "Start Recording",
+            action: #selector(CaptureController.toggleRecordingFromMenu),
+            keyEquivalent: "")
+        menu.addItem(recordingMenuItem)
         // FUSE:MENU-ITEMS
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit Fuse", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
@@ -71,6 +84,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         notesController.start()
         notesMenuItem.target = notesController
         notesMenuItem.action = #selector(NotesController.toggleFromMenu)
+        captureController = CaptureController()
+        captureController.recordingMenuItem = recordingMenuItem
+        captureController.start()
+        captureRegionMenuItem.target = captureController
+        recordingMenuItem.target = captureController
         // FUSE:CONTROLLER-START
 
         // One-time coexistence check: if a known overlapping utility is running
