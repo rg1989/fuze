@@ -1,0 +1,18 @@
+import XCTest
+import KeyboardShortcuts
+@testable import Fuse
+
+final class HotkeyNamesTests: XCTestCase {
+    func testAllNamesHaveDefaultShortcuts() {
+        let all: [KeyboardShortcuts.Name] = [
+            .pushToTalk, .pastePicker, .clearNotifications,
+            .tileLeftHalf, .tileRightHalf, .tileTopHalf, .tileBottomHalf,
+            .tileTopLeft, .tileTopRight, .tileBottomLeft, .tileBottomRight,
+            .tileMaximize, .tileCenter, .tileNextDisplay,
+            .toggleNotesPanel,
+        ]
+        for name in all {
+            XCTAssertNotNil(name.defaultShortcut, "\(name.rawValue) is missing a default shortcut")
+        }
+    }
+}
