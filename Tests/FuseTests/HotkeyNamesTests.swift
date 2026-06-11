@@ -10,6 +10,7 @@ final class HotkeyNamesTests: XCTestCase {
             .tileTopLeft, .tileTopRight, .tileBottomLeft, .tileBottomRight,
             .tileMaximize, .tileCenter, .tileNextDisplay,
             .toggleNotesPanel,
+            .captureRegion, .toggleRecording,
         ]
         for name in all {
             XCTAssertNotNil(name.defaultShortcut, "\(name.rawValue) is missing a default shortcut")

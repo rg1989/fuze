@@ -5,6 +5,7 @@ struct GeneralSettingsView: View {
     @State private var hasAccessibility = PermissionsService.hasAccessibility
     @State private var hasInputMonitoring = PermissionsService.hasInputMonitoring
     @State private var micStatus = PermissionsService.microphoneStatus
+    @State private var hasScreenRecording = PermissionsService.hasScreenRecording
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
     @State private var conflicts = ConflictDetector.currentConflicts()
 
@@ -45,6 +46,12 @@ struct GeneralSettingsView: View {
                     granted: micStatus == .authorized,
                     pane: .microphone,
                     prompt: { PermissionsService.requestMicrophone { _ in } })
+                permissionRow(
+                    title: "Screen Recording",
+                    detail: "Screenshots and screen recordings (Capture)",
+                    granted: hasScreenRecording,
+                    pane: .screenRecording,
+                    prompt: PermissionsService.promptForScreenRecording)
             }
             Section("Startup") {
                 Toggle("Launch Fuse at login", isOn: $launchAtLogin)
@@ -73,6 +80,7 @@ struct GeneralSettingsView: View {
             hasAccessibility = PermissionsService.hasAccessibility
             hasInputMonitoring = PermissionsService.hasInputMonitoring
             micStatus = PermissionsService.microphoneStatus
+            hasScreenRecording = PermissionsService.hasScreenRecording
             conflicts = ConflictDetector.currentConflicts()
         }
     }

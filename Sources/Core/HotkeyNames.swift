@@ -25,4 +25,8 @@ extension KeyboardShortcuts.Name {
     static let tileMaximize = Self("tileMaximize", default: .init(.return, modifiers: [.control, .option]))
     static let tileCenter = Self("tileCenter", default: .init(.c, modifiers: [.control, .option]))
     static let tileNextDisplay = Self("tileNextDisplay", default: .init(.n, modifiers: [.control, .option]))
+
+    // Capture (Phase 10)
+    static let captureRegion = Self("captureRegion", default: .init(.s, modifiers: [.control, .option]))
+    static let toggleRecording = Self("toggleRecording", default: .init(.r, modifiers: [.control, .option]))
 }

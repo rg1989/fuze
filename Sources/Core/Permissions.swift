@@ -7,6 +7,7 @@ enum SettingsPane: CaseIterable {
     case accessibility
     case inputMonitoring
     case microphone
+    case screenRecording
 
     var urlString: String {
         switch self {
@@ -16,6 +17,8 @@ enum SettingsPane: CaseIterable {
             return "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent"
         case .microphone:
             return "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
+        case .screenRecording:
+            return "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"
         }
     }
 }
@@ -53,6 +56,17 @@ enum PermissionsService {
 
     static var microphoneStatus: AVAuthorizationStatus {
         AVCaptureDevice.authorizationStatus(for: .audio)
+    }
+
+    /// Screen Recording (TCC kTCCServiceScreenCapture). Non-prompting check;
+    /// promptForScreenRecording() triggers the one-shot system dialog.
+    /// Both come from CoreGraphics (umbrella'd by ApplicationServices).
+    static var hasScreenRecording: Bool {
+        CGPreflightScreenCaptureAccess()
+    }
+
+    static func promptForScreenRecording() {
+        _ = CGRequestScreenCaptureAccess()
     }
 
     static func openSystemSettings(pane: SettingsPane) {
