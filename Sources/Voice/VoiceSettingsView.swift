@@ -1,12 +1,18 @@
+import AppKit
 import KeyboardShortcuts
 import SwiftUI
 
 struct VoiceSettingsView: View {
     @AppStorage("voice.modelName") private var modelName = "openai_whisper-base.en"
     @AppStorage("voice.language") private var language = "en"
+    @AppStorage("voice.removeFillers") private var removeFillers = true
+    @AppStorage(ModifierHoldMonitor.defaultsKey) private var modifierMask = 0
     @ObservedObject private var controller = VoiceController.shared
     @State private var micStatus = PermissionsService.microphoneStatus
     @State private var hasAccessibility = PermissionsService.hasAccessibility
+    @State private var capturingModifiers = false
+    @State private var captureMonitor: Any?
+    @State private var capturedUnion: UInt = 0
 
     private let refresh = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
 
@@ -35,6 +41,33 @@ struct VoiceSettingsView: View {
             Section("Shortcut") {
                 KeyboardShortcuts.Recorder("Push to talk", name: .pushToTalk)
                 Text("Hold to record, release to transcribe and paste at the cursor.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("Hold modifiers (alternative push-to-talk)") {
+                HStack {
+                    Text("Modifier keys")
+                    Spacer()
+                    Text(capturingModifiers
+                         ? "Hold the desired keys, then release…"
+                         : ModifierCombo(rawMask: UInt(bitPattern: modifierMask)).displayString)
+                        .foregroundStyle(capturingModifiers ? Color.accentColor : .secondary)
+                    Button(capturingModifiers ? "Cancel" : "Record") {
+                        capturingModifiers ? endModifierCapture() : beginModifierCapture()
+                    }
+                    if modifierMask != 0 && !capturingModifiers {
+                        Button("Clear") { modifierMask = 0 }
+                    }
+                }
+                Text("Modifier-only push-to-talk, e.g. Right ⌘ + Right ⌥ — hold to record, release to transcribe. Works alongside the shortcut above; keys are side-specific.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("Transcript") {
+                Toggle("Remove filler words (um, uh, erm, hmm…)", isOn: $removeFillers)
+                Text("Strips standalone vocal fillers and tidies the leftover punctuation before pasting.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -70,6 +103,34 @@ struct VoiceSettingsView: View {
             micStatus = PermissionsService.microphoneStatus
             hasAccessibility = PermissionsService.hasAccessibility
         }
+        .onDisappear { endModifierCapture() }
+    }
+
+    // MARK: - Modifier combo capture
+
+    private func beginModifierCapture() {
+        capturedUnion = 0
+        capturingModifiers = true
+        // Local monitor only: the settings window is key while recording.
+        captureMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { event in
+            let pressed = ModifierCombo.pressed(inFlags: event.modifierFlags.rawValue)
+            if pressed != 0 {
+                capturedUnion |= pressed
+            } else if capturedUnion != 0 {
+                // All keys released: commit the union as the combo.
+                modifierMask = Int(bitPattern: capturedUnion)
+                endModifierCapture()
+            }
+            return nil // swallow while capturing
+        }
+    }
+
+    private func endModifierCapture() {
+        if let monitor = captureMonitor {
+            NSEvent.removeMonitor(monitor)
+        }
+        captureMonitor = nil
+        capturingModifiers = false
     }
 
     @ViewBuilder

@@ -24,6 +24,7 @@ final class VoiceController: ObservableObject {
     private var lastRequestedModelName: String?
     private var defaultsObserver: NSObjectProtocol?
     private var pauseObserver: NSObjectProtocol?
+    private var modifierMonitor: ModifierHoldMonitor?
 
     private init() {}
 
@@ -39,6 +40,8 @@ final class VoiceController: ObservableObject {
         UserDefaults.standard.register(defaults: [
             "voice.modelName": "openai_whisper-base.en",
             "voice.language": "en",
+            "voice.removeFillers": true,
+            ModifierHoldMonitor.defaultsKey: 0,
         ])
 
         KeyboardShortcuts.onKeyDown(for: .pushToTalk) { [weak self] in
@@ -47,6 +50,15 @@ final class VoiceController: ObservableObject {
         KeyboardShortcuts.onKeyUp(for: .pushToTalk) { [weak self] in
             Task { @MainActor in self?.hotkeyUp() }
         }
+
+        // Modifier-hold push-to-talk (e.g. Right ⌘ + Right ⌥): KeyboardShortcuts
+        // can't record modifier-only combos, so a flagsChanged monitor feeds the
+        // same session pipeline. Off until the user records a combo in settings.
+        let monitor = ModifierHoldMonitor(
+            onDown: { [weak self] in self?.hotkeyDown() },
+            onUp: { [weak self] in self?.hotkeyUp() })
+        monitor.start()
+        modifierMonitor = monitor
 
         // Eager model load so the first dictation is not slow.
         prepareModel()
@@ -161,7 +173,8 @@ final class VoiceController: ObservableObject {
     }
 
     private func deliver(raw: String) {
-        guard let cleaned = TranscriptPostProcessor.clean(raw) else {
+        let removeFillers = UserDefaults.standard.bool(forKey: "voice.removeFillers")
+        guard let cleaned = TranscriptPostProcessor.clean(raw, removeFillers: removeFillers) else {
             hud.flash("No speech detected")
             execute(session.handle(.transcriptionFinished))
             return
