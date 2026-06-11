@@ -1,6 +1,6 @@
 # Phase 4: Smart Clipboard Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use /sp-subagent-driven-development (recommended) or /sp-executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. Read `00-MASTER.md` first. Prerequisite: Phases 0–1 complete.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use /sp-subagent-driven-development (recommended) or /sp-executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking. Read `00-MASTER.md` first. Prerequisite: Phases 0–1 complete.
 
 **Goal:** A Maccy/Paste-class clipboard history: a polling pasteboard watcher persists everything the user copies (text, RTF, HTML, images, file references, links) losslessly into a GRDB/SQLite store with previews, thumbnails, dedupe, pinning, and pruning; a ⇧⌘V non-activating picker panel lets the user search and re-paste any item into the frontmost app via `PasteService`, restoring the previous clipboard afterwards; a Clipboard settings tab controls it all.
 
@@ -45,7 +45,7 @@ New files: `Sources/Clipboard/{ClipboardItem,ClipboardStore,PasteboardWatcher,Cl
 
 **Files:** none (verification only).
 
-- [ ] **Step 1: Verify Phase 1 files and anchors exist**
+- [x] **Step 1: Verify Phase 1 files and anchors exist**
 
 ```bash
 ls Sources/Core
@@ -54,7 +54,7 @@ grep -c "FUSE:SETTINGS_TABS" Sources/App/SettingsRootView.swift
 ```
 Expected: `ls` lists all of `AX.swift HotkeyNames.swift Log.swift PasteService.swift Permissions.swift`; the greps print `2` and `1`. If anything is missing, STOP — Phases 0–1 are incomplete.
 
-- [ ] **Step 2: Verify build and tests are green before touching anything**
+- [x] **Step 2: Verify build and tests are green before touching anything**
 
 ```bash
 xcodegen generate
@@ -74,7 +74,7 @@ Expected: `** BUILD SUCCEEDED **`, then `** TEST SUCCEEDED **`. If red, STOP and
 
 Two tables: `clipboardItem` (one row per distinct copied thing; UNIQUE `contentHash` for dedupe) and `itemRepresentation` (every raw pasteboard representation, so a paste is lossless — ALL stored representations get re-written).
 
-- [ ] **Step 1: Write the failing tests — `Tests/FuseTests/ClipboardStoreTests.swift`**
+- [x] **Step 1: Write the failing tests — `Tests/FuseTests/ClipboardStoreTests.swift`**
 
 ```swift
 import XCTest
@@ -187,7 +187,7 @@ final class ClipboardStoreTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 xcodegen generate
@@ -195,7 +195,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 ```
 Expected: **BUILD FAILS** with `cannot find 'ClipboardStore' in scope` (compile failure is this step's "red").
 
-- [ ] **Step 3: Write `Sources/Clipboard/ClipboardItem.swift`**
+- [x] **Step 3: Write `Sources/Clipboard/ClipboardItem.swift`**
 
 ```swift
 import Foundation
@@ -230,7 +230,7 @@ struct ItemRepresentationRecord: Codable, Equatable, FetchableRecord, MutablePer
 }
 ```
 
-- [ ] **Step 4: Write `Sources/Clipboard/ClipboardStore.swift`**
+- [x] **Step 4: Write `Sources/Clipboard/ClipboardStore.swift`**
 
 ```swift
 import CryptoKit
@@ -362,7 +362,7 @@ final class ClipboardStore {
 }
 ```
 
-- [ ] **Step 5: Run tests to verify they pass**
+- [x] **Step 5: Run tests to verify they pass**
 
 ```bash
 xcodegen generate
@@ -370,7 +370,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 ```
 Expected: `** TEST SUCCEEDED **`, all 9 `ClipboardStoreTests` passed. (Hosted tests launch Fuse.app, but the `XCTestCase` guard in `applicationDidFinishLaunching` keeps all controllers/watchers off during test runs.)
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add Sources/Clipboard/ClipboardItem.swift Sources/Clipboard/ClipboardStore.swift Tests/FuseTests/ClipboardStoreTests.swift
@@ -387,7 +387,7 @@ git commit -m "feat(clipboard): GRDB store with dedupe, search, pinning, and pru
 
 Pure functions: should a pasteboard change be captured at all, and as what (kind, preview)? Priority: file > image > rtf > link > text.
 
-- [ ] **Step 1: Write the failing tests — `Tests/FuseTests/PasteboardCaptureTests.swift`**
+- [x] **Step 1: Write the failing tests — `Tests/FuseTests/PasteboardCaptureTests.swift`**
 
 ```swift
 import AppKit
@@ -466,7 +466,7 @@ final class PasteboardCaptureTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 xcodegen generate
@@ -474,7 +474,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 ```
 Expected: **BUILD FAILS** with `cannot find 'CaptureClassifier' in scope`.
 
-- [ ] **Step 3: Write `Sources/Clipboard/PasteboardWatcher.swift`** (classifier only at this point)
+- [x] **Step 3: Write `Sources/Clipboard/PasteboardWatcher.swift`** (classifier only at this point)
 
 ```swift
 import AppKit
@@ -537,14 +537,14 @@ enum CaptureClassifier {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&1 | tail -20
 ```
 Expected: `** TEST SUCCEEDED **`, all 8 `PasteboardCaptureTests` passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/Clipboard/PasteboardWatcher.swift Tests/FuseTests/PasteboardCaptureTests.swift
@@ -561,7 +561,7 @@ git commit -m "feat(clipboard): pure capture classifier for pasteboard contents"
 
 macOS has **no** pasteboard-change notification. Polling `NSPasteboard.general.changeCount` on a 0.3 s timer is the standard technique (Maccy et al.). The thumbnail scaler is unit-tested; the live capture path is human-verified in Task 4.5 once the controller wires it up.
 
-- [ ] **Step 1: Add the failing thumbnail test** — inside the `final class PasteboardCaptureTests` body in `Tests/FuseTests/PasteboardCaptureTests.swift`, immediately before the class's closing brace, add:
+- [x] **Step 1: Add the failing thumbnail test** — inside the `final class PasteboardCaptureTests` body in `Tests/FuseTests/PasteboardCaptureTests.swift`, immediately before the class's closing brace, add:
 
 ```swift
     func testThumbnailScalesLongestSideTo200AndNeverUpscales() throws {
@@ -584,14 +584,14 @@ macOS has **no** pasteboard-change notification. Polling `NSPasteboard.general.c
     }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&1 | tail -20
 ```
 Expected: **BUILD FAILS** with `cannot find 'PasteboardWatcher' in scope`.
 
-- [ ] **Step 3: Append the watcher class** to the END of `Sources/Clipboard/PasteboardWatcher.swift`, after the closing brace of `CaptureClassifier` (change nothing above it):
+- [x] **Step 3: Append the watcher class** to the END of `Sources/Clipboard/PasteboardWatcher.swift`, after the closing brace of `CaptureClassifier` (change nothing above it):
 
 ```swift
 
@@ -718,14 +718,14 @@ final class PasteboardWatcher {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&1 | tail -20
 ```
 Expected: `** TEST SUCCEEDED **`, all 9 `PasteboardCaptureTests` passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/Clipboard/PasteboardWatcher.swift Tests/FuseTests/PasteboardCaptureTests.swift
@@ -742,7 +742,7 @@ git commit -m "feat(clipboard): polling pasteboard watcher with allowlist, size 
 
 The panel is **non-activating**: it takes keyboard focus WITHOUT activating Fuse, so the previously frontmost app stays frontmost and receives the synthesized ⌘V. That is the entire trick that makes paste-into-other-app work.
 
-- [ ] **Step 1: Write `Sources/Clipboard/PastePickerPanel.swift`**
+- [x] **Step 1: Write `Sources/Clipboard/PastePickerPanel.swift`**
 
 ```swift
 import AppKit
@@ -786,7 +786,7 @@ final class PastePickerPanel: NSPanel {
 }
 ```
 
-- [ ] **Step 2: Write `Sources/Clipboard/PastePickerView.swift`**
+- [x] **Step 2: Write `Sources/Clipboard/PastePickerView.swift`**
 
 ```swift
 import AppKit
@@ -948,7 +948,7 @@ struct PastePickerView: View {
 }
 ```
 
-- [ ] **Step 3: Regenerate, build, run tests, commit**
+- [x] **Step 3: Regenerate, build, run tests, commit**
 
 ```bash
 xcodegen generate
@@ -967,7 +967,7 @@ Expected: `** BUILD SUCCEEDED **`, then `** TEST SUCCEEDED **` (no new tests; no
 - Create: `Sources/Clipboard/ClipboardController.swift`
 - Modify: `Sources/App/AppDelegate.swift` (anchor inserts ONLY — change nothing else)
 
-- [ ] **Step 1: Write `Sources/Clipboard/ClipboardController.swift`**
+- [x] **Step 1: Write `Sources/Clipboard/ClipboardController.swift`**
 
 ```swift
 import AppKit
@@ -1063,7 +1063,7 @@ final class ClipboardController {
 }
 ```
 
-- [ ] **Step 2: Wire into `Sources/App/AppDelegate.swift`** — two anchor edits, nothing else.
+- [x] **Step 2: Wire into `Sources/App/AppDelegate.swift`** — two anchor edits, nothing else.
 
 Edit A — find the line containing exactly `// FUSE:CONTROLLER-PROPS` and insert one line ABOVE it, so the file reads:
 
@@ -1082,7 +1082,7 @@ Edit B — find the line containing exactly `// FUSE:CONTROLLER-START` (inside `
 
 `ClipboardController()` is a failable initializer; the optional assignment and `?.start()` keep the app alive if the database can't open. The `XCTestCase` guard at the top of `applicationDidFinishLaunching` (Phase 0) already keeps the watcher and hotkey off during hosted test runs — do not remove it.
 
-- [ ] **Step 3: Regenerate, build, test**
+- [x] **Step 3: Regenerate, build, test**
 
 ```bash
 xcodegen generate
@@ -1111,7 +1111,7 @@ Ask the human to perform ALL of the following and report each result. STOP and d
 8. **Keys:** reopen the picker; esc closes it; ⌘1 pastes the first item; ⌘↩ toggles the pin icon on the selected row; ⌫ (with empty search field) deletes the selected row.
 9. **Concealed skip:** copy a password from a password manager (1Password/Bitwarden/Keychain Access) — it must NOT appear in history. (Skip if none installed; the unit test covers the logic.)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/Clipboard/ClipboardController.swift Sources/App/AppDelegate.swift
@@ -1126,7 +1126,7 @@ git commit -m "feat(clipboard): controller wiring, paste-picker hotkey, paste-an
 - Create: `Sources/Clipboard/ClipboardSettingsView.swift`
 - Modify: `Sources/App/SettingsRootView.swift` (anchor insert ONLY)
 
-- [ ] **Step 1: Write `Sources/Clipboard/ClipboardSettingsView.swift`**
+- [x] **Step 1: Write `Sources/Clipboard/ClipboardSettingsView.swift`**
 
 ```swift
 import KeyboardShortcuts
@@ -1198,7 +1198,7 @@ struct ClipboardSettingsView: View {
 }
 ```
 
-- [ ] **Step 2: Add the tab in `Sources/App/SettingsRootView.swift`** — find the line containing exactly `// FUSE:SETTINGS_TABS` and insert two lines ABOVE it (other phases may have added their own tab lines nearby — leave those untouched):
+- [x] **Step 2: Add the tab in `Sources/App/SettingsRootView.swift`** — find the line containing exactly `// FUSE:SETTINGS_TABS` and insert two lines ABOVE it (other phases may have added their own tab lines nearby — leave those untouched):
 
 ```swift
             ClipboardSettingsView()
@@ -1206,7 +1206,7 @@ struct ClipboardSettingsView: View {
             // FUSE:SETTINGS_TABS
 ```
 
-- [ ] **Step 3: Regenerate, build, test**
+- [x] **Step 3: Regenerate, build, test**
 
 ```bash
 xcodegen generate
@@ -1230,7 +1230,7 @@ Ask the human to confirm, in order:
 
 Record the answers; debug before committing if anything fails.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/Clipboard/ClipboardSettingsView.swift Sources/App/SettingsRootView.swift
@@ -1249,7 +1249,7 @@ Precondition: `Sources/Core/PauseManager.swift` exists (Phase 1 Task 1.7). Two r
 - Modify: `Sources/Clipboard/ClipboardSettingsView.swift`
 - Test: `Tests/FuseTests/ClipboardExclusionsTests.swift`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```swift
 import XCTest
@@ -1286,7 +1286,7 @@ final class ClipboardExclusionsTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify failure**
+- [x] **Step 2: Run tests to verify failure**
 
 ```bash
 xcodegen generate
@@ -1294,7 +1294,7 @@ xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&
 ```
 Expected: compile failure, `cannot find 'ClipboardExclusions' in scope`.
 
-- [ ] **Step 3: Write `Sources/Clipboard/ClipboardExclusions.swift`**
+- [x] **Step 3: Write `Sources/Clipboard/ClipboardExclusions.swift`**
 
 ```swift
 import Foundation
@@ -1327,14 +1327,14 @@ enum ClipboardExclusions {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&1 | tail -10
 ```
 Expected: `** TEST SUCCEEDED **`.
 
-- [ ] **Step 5: Wire the watcher — three precise edits to `Sources/Clipboard/PasteboardWatcher.swift`**
+- [x] **Step 5: Wire the watcher — three precise edits to `Sources/Clipboard/PasteboardWatcher.swift`**
 
 Edit A — replace the entire `poll()` method with (note the swallow semantics: changes made while paused or disabled advance `lastChangeCount` WITHOUT capturing, so resuming never records stale copies):
 
@@ -1383,7 +1383,7 @@ with (reuse the value read before the guard):
                            sourceApp: sourceBundleID,
 ```
 
-- [ ] **Step 6: Settings UI — two precise edits to `Sources/Clipboard/ClipboardSettingsView.swift`**
+- [x] **Step 6: Settings UI — two precise edits to `Sources/Clipboard/ClipboardSettingsView.swift`**
 
 Edit A — add two state properties directly below `@State private var hasAccessibility = PermissionsService.hasAccessibility`:
 
@@ -1449,7 +1449,7 @@ Edit C — add two helper methods directly below `clearUnpinned()` (and add `imp
     }
 ```
 
-- [ ] **Step 7: Build and run all tests**
+- [x] **Step 7: Build and run all tests**
 
 ```bash
 xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&1 | tail -10
@@ -1468,7 +1468,7 @@ Ask the human to confirm, in order:
 3. Remove Terminal → Terminal copies record again.
 4. "Pause Fuse" from the menu, copy something in TextEdit, resume → that copy is ABSENT from history (swallowed, not deferred); a fresh copy after resuming appears.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add Sources/Clipboard/ClipboardExclusions.swift Sources/Clipboard/PasteboardWatcher.swift Sources/Clipboard/ClipboardSettingsView.swift Tests/FuseTests/ClipboardExclusionsTests.swift
@@ -1488,8 +1488,8 @@ Run end-to-end after Task 4.6 (app running from `.build/Build/Products/Debug/Fus
 - [ ] **HUMAN-VERIFY** Pin an item (⌘↩), then Settings → Clipboard → "Clear unpinned history": the pinned item survives, everything else is gone.
 - [ ] **HUMAN-VERIFY** Quit Fuse and relaunch: history is still there (SQLite persistence).
 - [ ] **HUMAN-VERIFY** Copy identical text twice → exactly one history entry, bubbled to the top.
-- [ ] All unit tests green: `xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&1 | tail -20` → `** TEST SUCCEEDED **`.
-- [ ] `git log --oneline | head -8` shows the six Phase 4 commits on top.
+- [x] All unit tests green: `xcodebuild -project Fuse.xcodeproj -scheme Fuse -derivedDataPath .build test 2>&1 | tail -20` → `** TEST SUCCEEDED **`.
+- [x] `git log --oneline | head -8` shows the six Phase 4 commits on top.
 
 ## Risks & gotchas
 
@@ -1503,3 +1503,7 @@ Run end-to-end after Task 4.6 (app running from `.build/Build/Products/Debug/Fus
 - **Search uses SQL LIKE:** `%` and `_` typed in the search field act as wildcards. Harmless, accepted.
 - **One SQLite connection:** controller and settings tab share `ClipboardStore.shared`. Never call `ClipboardStore.onDisk()` a second time from feature code — two connections on the same file can hit `SQLITE_BUSY`.
 - **10 MB cap:** huge copies are skipped entirely and logged. Watch with `log stream --predicate 'subsystem == "com.rgv250cc.Fuse" AND category == "clipboard"' --level debug` whenever a copy "didn't show up".
+
+## Deviations
+
+None. All code was implemented exactly as written in this plan; no GRDB or KeyboardShortcuts API drift was encountered. HUMAN-VERIFY steps (Task 4.5 Step 4, Task 4.6 Step 4, Task 4.7 Step 8, and the manual verification checklist) were skipped — no human available in this execution environment; their checkboxes remain unticked.
