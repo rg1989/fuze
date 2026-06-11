@@ -19,7 +19,7 @@ private struct RecPulseDot: View {
             let t = context.date.timeIntervalSinceReferenceDate
             let pulse = 0.5 + 0.5 * sin(t * 3.2)
             let gradient = LinearGradient(
-                colors: [FuseTheme.terracotta, FuseTheme.terracottaDeep],
+                colors: [FuseTheme.recordingRedBright, FuseTheme.recordingRed],
                 startPoint: .top, endPoint: .bottom)
             Group {
                 if hollow {
@@ -29,7 +29,7 @@ private struct RecPulseDot: View {
                 }
             }
             .frame(width: 12, height: 12)
-            .shadow(color: FuseTheme.terracotta.opacity(0.45 + 0.35 * pulse),
+            .shadow(color: FuseTheme.recordingRed.opacity(0.45 + 0.35 * pulse),
                     radius: 5 + 3 * pulse)
         }
     }
@@ -52,7 +52,7 @@ struct RecHUDView: View {
                         .padding(.horizontal, 4)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(FuseTheme.terracottaDeep)
+                .tint(FuseTheme.recordingRed)
                 .controlSize(.large)
                 .keyboardShortcut(.defaultAction)
                 Button("Cancel") { model.onCancel?() }
@@ -62,7 +62,7 @@ struct RecHUDView: View {
             case .recording:
                 RecPulseDot()
                 Text(model.elapsedText)
-                    .font(FuseTheme.hudFont(size: 14, weight: .semibold))
+                    .font(FuseTheme.hudFont(size: 14, weight: .semibold, italic: false))
                     .monospacedDigit()
                     .foregroundStyle(FuseTheme.ink.opacity(0.92))
                 Button { model.onStop?() } label: {
@@ -70,7 +70,7 @@ struct RecHUDView: View {
                         .font(.system(size: 12, weight: .semibold))
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(FuseTheme.terracottaDeep)
+                .tint(FuseTheme.recordingRed)
             }
         }
         .padding(.horizontal, 18)

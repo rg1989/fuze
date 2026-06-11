@@ -14,7 +14,7 @@ final class RecordingHUDModel: ObservableObject {
     @Published var display: Display = .hidden
 }
 
-/// Pulsing terracotta orb with a soft glow — the "live mic" indicator.
+/// Pulsing recording-red orb with a soft glow — the "live mic" indicator.
 private struct GlowOrb: View {
     var body: some View {
         TimelineView(.animation(minimumInterval: 1 / 30)) { context in
@@ -22,15 +22,15 @@ private struct GlowOrb: View {
             let pulse = 0.5 + 0.5 * sin(t * 3.0)
             ZStack {
                 Circle()
-                    .fill(FuseTheme.terracotta.opacity(0.25 + 0.25 * pulse))
+                    .fill(FuseTheme.recordingRed.opacity(0.25 + 0.25 * pulse))
                     .frame(width: 22, height: 22)
                     .blur(radius: 6)
                 Circle()
                     .fill(LinearGradient(
-                        colors: [FuseTheme.terracotta, FuseTheme.terracottaDeep],
+                        colors: [FuseTheme.recordingRedBright, FuseTheme.recordingRed],
                         startPoint: .top, endPoint: .bottom))
                     .frame(width: 12, height: 12)
-                    .shadow(color: FuseTheme.terracotta.opacity(0.5 + 0.3 * pulse),
+                    .shadow(color: FuseTheme.recordingRed.opacity(0.5 + 0.3 * pulse),
                             radius: 4 + 4 * pulse)
             }
             .frame(width: 24, height: 24)
@@ -49,7 +49,7 @@ private struct EqualizerBars: View {
                     let height = 5 + 13 * abs(sin(t * 2.7 + phase) * sin(t * 1.6 + phase * 1.4))
                     Capsule()
                         .fill(LinearGradient(
-                            colors: [FuseTheme.terracotta, FuseTheme.terracottaDeep],
+                            colors: [FuseTheme.recordingRedBright, FuseTheme.recordingRed],
                             startPoint: .top, endPoint: .bottom))
                         .frame(width: 3, height: height)
                 }
@@ -59,22 +59,22 @@ private struct EqualizerBars: View {
     }
 }
 
-/// Rotating angular-gradient ring — the transcription spinner.
-private struct ShimmerRing: View {
+/// Rotating angular-gradient ring — the transcription spinner (deep orange).
+private struct TranscribeRing: View {
     var body: some View {
         TimelineView(.animation(minimumInterval: 1 / 30)) { context in
             let t = context.date.timeIntervalSinceReferenceDate
             Circle()
                 .stroke(
                     AngularGradient(
-                        colors: [FuseTheme.terracotta.opacity(0.0),
-                                 FuseTheme.terracotta,
-                                 FuseTheme.terracottaDeep],
+                        colors: [FuseTheme.transcribeOrange.opacity(0.0),
+                                 FuseTheme.transcribeOrange,
+                                 FuseTheme.transcribeOrangeDeep],
                         center: .center),
                     style: StrokeStyle(lineWidth: 3, lineCap: .round))
                 .frame(width: 17, height: 17)
                 .rotationEffect(.radians(t * 2.6))
-                .shadow(color: FuseTheme.terracotta.opacity(0.5), radius: 5)
+                .shadow(color: FuseTheme.transcribeOrange.opacity(0.5), radius: 5)
                 .frame(width: 24, height: 24)
         }
     }
@@ -91,23 +91,27 @@ struct RecordingHUDView: View {
             case .recording:
                 GlowOrb()
                 EqualizerBars()
-                Text("Recording")
+                ShimmerText(text: "Recording",
+                            base: FuseTheme.recordingRed,
+                            highlight: FuseTheme.recordingRedShine)
             case .transcribing:
-                ShimmerRing()
-                Text("Transcribing…")
+                TranscribeRing()
+                ShimmerText(text: "Transcribing…",
+                            base: FuseTheme.transcribeOrange,
+                            highlight: FuseTheme.transcribeOrangeShine)
             case .message(let text):
                 Image(systemName: "exclamationmark.circle.fill")
                     .font(.system(size: 16))
-                    .foregroundStyle(FuseTheme.terracotta)
-                    .shadow(color: FuseTheme.terracotta.opacity(0.4), radius: 5)
+                    .foregroundStyle(FuseTheme.transcribeOrange)
+                    .shadow(color: FuseTheme.transcribeOrange.opacity(0.4), radius: 5)
                 Text(text)
+                    .foregroundStyle(FuseTheme.ink.opacity(0.92))
                     .lineLimit(2)
                     .frame(maxWidth: 320, alignment: .leading)
                     .fixedSize(horizontal: true, vertical: false)
             }
         }
         .font(FuseTheme.hudFont(size: 14))
-        .foregroundStyle(FuseTheme.ink.opacity(0.92))
         .padding(.horizontal, 19)
         .padding(.vertical, 12)
         .hudPillChrome()
