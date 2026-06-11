@@ -77,6 +77,15 @@ final class PastePickerViewModel: ObservableObject {
         do { try store.delete(id: id); reload() }
         catch { Log.clipboard.error("delete failed: \(error.localizedDescription)") }
     }
+
+    /// The stored file URL of a "file"-kind item, for thumbnail generation.
+    func fileURL(for item: ClipboardItem) -> URL? {
+        guard item.kind == "file", let id = item.id,
+              let reps = try? store.representations(forItem: id),
+              let data = reps.first(where: { $0.type == "public.file-url" })?.data
+        else { return nil }
+        return URL(dataRepresentation: data, relativeTo: nil)
+    }
 }
 
 struct PastePickerView: View {
@@ -98,10 +107,14 @@ struct PastePickerView: View {
                 ScrollViewReader { proxy in
                     List {
                         ForEach(Array(model.items.enumerated()), id: \.element.id) { index, item in
-                            row(for: item, index: index)
+                            PickerRow(item: item, index: index, fileURL: model.fileURL(for: item))
                                 .id(index)
-                                .listRowBackground(index == model.selectedIndex
-                                    ? Color.accentColor.opacity(0.25) : Color.clear)
+                                .listRowInsets(EdgeInsets(top: 3, leading: 8, bottom: 3, trailing: 8))
+                                .listRowBackground(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .fill(index == model.selectedIndex
+                                            ? Color.accentColor.opacity(0.25) : Color.clear)
+                                        .padding(.horizontal, 4))
                                 .contentShape(Rectangle())
                                 .onTapGesture {
                                     model.selectedIndex = index
@@ -117,41 +130,105 @@ struct PastePickerView: View {
             Text("↩ paste · ⌘↩ pin · ⌫ delete · esc close")
                 .font(.caption).foregroundStyle(.secondary).padding(6)
         }
-        .frame(width: 420, height: 480)
+        .frame(width: 460, height: 520)
         .onAppear { searchFocused = true }
         .onChange(of: model.focusRequest) { _, _ in searchFocused = true }
     }
+}
 
-    @ViewBuilder
-    private func row(for item: ClipboardItem, index: Int) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: iconName(for: item.kind)).frame(width: 18).foregroundStyle(.secondary)
-            if item.kind == "image", let data = item.thumbnail, let image = NSImage(data: data) {
-                Image(nsImage: image).resizable().scaledToFit()
-                    .frame(maxWidth: 60, maxHeight: 36)
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(item.preview.replacingOccurrences(of: "\n", with: " ")).lineLimit(1)
+/// One clipboard row: fixed 44×44 visual box (thumbnail / favicon / colored
+/// kind icon) + preview + colored kind badge. Every row is exactly the same
+/// height so the list scans uniformly.
+private struct PickerRow: View {
+    let item: ClipboardItem
+    let index: Int
+    let fileURL: URL?
+
+    @State private var visual: NSImage?
+
+    private var style: KindStyle { KindStyle.style(for: item.kind) }
+    private var isVideoFile: Bool { fileURL.map { ClipboardMedia.isVideo(path: $0.path) } ?? false }
+    private var linkHost: String? { item.kind == "link" ? URL(string: item.preview)?.host : nil }
+    private var kindLabel: String { isVideoFile ? "Video" : item.kind.capitalized }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            visualBox
+            VStack(alignment: .leading, spacing: 3) {
+                Text(item.preview.replacingOccurrences(of: "\n", with: " "))
+                    .lineLimit(1)
                 HStack(spacing: 6) {
-                    if index < 9 { Text("⌘\(index + 1)").font(.caption2).foregroundStyle(.tertiary) }
+                    Text(kindLabel)
+                        .font(.caption2.weight(.semibold))
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .foregroundStyle(style.tint)
+                        .background(style.tint.opacity(0.16), in: Capsule())
+                    if let linkHost {
+                        Text(linkHost).font(.caption2).foregroundStyle(.tertiary).lineLimit(1)
+                    }
+                    if index < 9 {
+                        Text("⌘\(index + 1)").font(.caption2).foregroundStyle(.tertiary)
+                    }
                     Text(item.createdAt, style: .relative).font(.caption2).foregroundStyle(.tertiary)
                 }
             }
-            Spacer()
-            if item.pinned { Image(systemName: "pin.fill").font(.caption).foregroundStyle(.orange) }
+            Spacer(minLength: 4)
+            if item.pinned {
+                Image(systemName: "pin.fill").font(.caption).foregroundStyle(.orange)
+            }
         }
-        .padding(.vertical, 2)
+        .frame(height: 48)
+        .task(id: item.id) { await loadVisual() }
     }
 
-    private func iconName(for kind: String) -> String {
-        switch kind {
-        case "text": return "doc.plaintext"
-        case "link": return "link"
-        case "image": return "photo"
-        case "file": return "doc"
-        case "rtf": return "textformat"
-        default: return "questionmark.square"
+    @ViewBuilder
+    private var visualBox: some View {
+        ZStack(alignment: .bottomTrailing) {
+            if let visual {
+                Image(nsImage: visual)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 44, height: 44)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .overlay(RoundedRectangle(cornerRadius: 8)
+                        .strokeBorder(style.tint.opacity(0.5), lineWidth: 1))
+                if isVideoFile {
+                    badge("play.fill")
+                } else if item.kind == "link" {
+                    badge("link")
+                }
+            } else {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(style.tint.opacity(0.15))
+                    .frame(width: 44, height: 44)
+                    .overlay(Image(systemName: style.symbol)
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundStyle(style.tint))
+            }
+        }
+        .frame(width: 44, height: 44)
+    }
+
+    private func badge(_ symbol: String) -> some View {
+        Image(systemName: symbol)
+            .font(.system(size: 7, weight: .bold))
+            .foregroundStyle(.white)
+            .frame(width: 14, height: 14)
+            .background(style.tint, in: Circle())
+            .offset(x: 3, y: 3)
+    }
+
+    private func loadVisual() async {
+        switch item.kind {
+        case "image":
+            visual = item.thumbnail.flatMap(NSImage.init(data:))
+        case "file":
+            if let fileURL { visual = await FileThumbnailLoader.thumbnail(for: fileURL) }
+        case "link":
+            visual = await FaviconLoader.favicon(forLink: item.preview)
+        default:
+            visual = nil
         }
     }
 }

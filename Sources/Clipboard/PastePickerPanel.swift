@@ -9,7 +9,7 @@ final class PastePickerPanel: NSPanel {
     override var canBecomeKey: Bool { true }
 
     init() {
-        super.init(contentRect: NSRect(x: 0, y: 0, width: 420, height: 480),
+        super.init(contentRect: NSRect(x: 0, y: 0, width: 460, height: 520),
                    styleMask: [.nonactivatingPanel, .titled, .fullSizeContentView],
                    backing: .buffered, defer: false)
         titlebarAppearsTransparent = true
