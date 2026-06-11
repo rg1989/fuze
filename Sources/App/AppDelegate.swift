@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem!
     private var settingsWindow: NSWindow?
 
@@ -10,13 +10,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var clipboardController: ClipboardController!
     private var voiceController: VoiceController!
     private var downloaderController: DownloaderController!
+    private var downloadsMenuItem: NSMenuItem!
     private var notificationsController: NotificationsController!
     private var clearNotificationsMenuItem: NSMenuItem!
     private var notesController: NotesController!
     private var notesMenuItem: NSMenuItem!
     private var captureController: CaptureController!
-    private var captureRegionMenuItem: NSMenuItem!
-    private var recordingMenuItem: NSMenuItem!
     private var screenshotsFolderMenuItem: NSMenuItem!
     private var recordingsFolderMenuItem: NSMenuItem!
     // FUSE:CONTROLLER-PROPS
@@ -31,48 +30,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             accessibilityDescription: "Fuse")
 
         let menu = NSMenu()
-        let pauseItem = NSMenuItem(title: "Pause Fuse", action: #selector(togglePause(_:)), keyEquivalent: "")
+        // Enabled state is driven by the module switches via menuNeedsUpdate,
+        // not by the responder chain.
+        menu.autoenablesItems = false
+        menu.delegate = self
+        let pauseItem = menuItem("Pause Fuse", icon: "pause.circle",
+                                 action: #selector(togglePause(_:)))
         pauseItem.target = self
         menu.addItem(pauseItem)
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ","))
+        let settingsItem = menuItem("Settings…", icon: "gearshape",
+                                    action: #selector(openSettings), key: ",")
+        menu.addItem(settingsItem)
         if downloaderController == nil { downloaderController = DownloaderController() }
-        let downloadsItem = NSMenuItem(title: "Downloads…",
-                                       action: #selector(DownloaderController.openDownloadsWindow),
-                                       keyEquivalent: "")
-        downloadsItem.target = downloaderController
-        menu.addItem(downloadsItem)
-        let clipboardDownloadItem = NSMenuItem(title: "Download URL from Clipboard",
-                                               action: #selector(DownloaderController.downloadFromClipboard),
-                                               keyEquivalent: "")
-        clipboardDownloadItem.target = downloaderController
-        menu.addItem(clipboardDownloadItem)
-        clearNotificationsMenuItem = NSMenuItem(
-            title: "Clear Notifications",
-            action: #selector(NotificationsController.clearNow),
-            keyEquivalent: "")
+        downloadsMenuItem = menuItem("Downloads…", icon: "arrow.down.circle",
+                                     action: #selector(DownloaderController.openDownloadsWindow),
+                                     key: "d")
+        downloadsMenuItem.target = downloaderController
+        menu.addItem(downloadsMenuItem)
+        clearNotificationsMenuItem = menuItem("Clear Notifications", icon: "bell.badge",
+                                              action: #selector(NotificationsController.clearNow))
         menu.addItem(clearNotificationsMenuItem)
-        notesMenuItem = NSMenuItem(title: "Notes", action: nil, keyEquivalent: "")
+        notesMenuItem = menuItem("Notes", icon: "note.text", action: nil)
         menu.addItem(notesMenuItem)
-        captureRegionMenuItem = NSMenuItem(
-            title: "Capture Region",
-            action: #selector(CaptureController.captureRegionFromMenu),
-            keyEquivalent: "")
-        menu.addItem(captureRegionMenuItem)
-        recordingMenuItem = NSMenuItem(
-            title: "Start Recording",
-            action: #selector(CaptureController.toggleRecordingFromMenu),
-            keyEquivalent: "")
-        menu.addItem(recordingMenuItem)
-        screenshotsFolderMenuItem = NSMenuItem(
-            title: "Open Screenshots Folder",
-            action: #selector(CaptureController.openScreenshotsFolderFromMenu),
-            keyEquivalent: "")
+        screenshotsFolderMenuItem = menuItem(
+            "Open Screenshots Folder", icon: "photo",
+            action: #selector(CaptureController.openScreenshotsFolderFromMenu))
         menu.addItem(screenshotsFolderMenuItem)
-        recordingsFolderMenuItem = NSMenuItem(
-            title: "Open Recordings Folder",
-            action: #selector(CaptureController.openRecordingsFolderFromMenu),
-            keyEquivalent: "")
+        recordingsFolderMenuItem = menuItem(
+            "Open Recordings Folder", icon: "film",
+            action: #selector(CaptureController.openRecordingsFolderFromMenu))
         menu.addItem(recordingsFolderMenuItem)
         // FUSE:MENU-ITEMS
         menu.addItem(.separator())
@@ -97,10 +84,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         notesMenuItem.target = notesController
         notesMenuItem.action = #selector(NotesController.toggleFromMenu)
         captureController = CaptureController()
-        captureController.recordingMenuItem = recordingMenuItem
         captureController.start()
-        captureRegionMenuItem.target = captureController
-        recordingMenuItem.target = captureController
         screenshotsFolderMenuItem.target = captureController
         recordingsFolderMenuItem.target = captureController
         // FUSE:CONTROLLER-START
@@ -114,6 +98,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 openSettings()
             }
         }
+    }
+
+    /// Gray out menu items whose module is switched off (General → Fused apps).
+    /// The folder openers stay live regardless — they are plain Finder
+    /// shortcuts, useful even while Capture itself is off.
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        let defaults = UserDefaults.standard
+        downloadsMenuItem.isEnabled = defaults.bool(forKey: "downloads.enabled")
+        clearNotificationsMenuItem.isEnabled = defaults.bool(forKey: "notifications.enabled")
+        notesMenuItem.isEnabled = defaults.bool(forKey: "notes.enabled")
+    }
+
+    private func menuItem(_ title: String, icon: String,
+                          action: Selector?, key: String = "") -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: key)
+        item.image = NSImage(systemSymbolName: icon, accessibilityDescription: nil)
+        return item
     }
 
     @objc func openSettings() {
