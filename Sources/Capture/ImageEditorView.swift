@@ -259,7 +259,7 @@ final class ImageEditorState: ObservableObject {
     }
 }
 
-struct ImageEditorView: View {
+struct ImageEditorPane: View {
     @ObservedObject var state: ImageEditorState
     @FocusState private var textFieldFocused: Bool
 
@@ -274,7 +274,6 @@ struct ImageEditorView: View {
                     .padding(12)
             }
         }
-        .frame(minWidth: 680, minHeight: 440)
     }
 
     private var toolbar: some View {
@@ -320,9 +319,6 @@ struct ImageEditorView: View {
                     .disabled(state.cropRect == nil)
             }
             Spacer()
-            Button("Copy") { state.copyFlattened() }
-            Button("Save") { state.save() }
-            Button("Save As…") { state.saveAs() }
         }
         .padding(10)
     }
@@ -385,6 +381,16 @@ struct ImageEditorView: View {
             .onEnded { value in
                 state.dragEnded(start: value.startLocation, end: value.location)
             }
+    }
+}
+
+/// Transitional wrapper — removed when the standalone editor window goes
+/// away in favor of the capture review window.
+struct ImageEditorView: View {
+    @ObservedObject var state: ImageEditorState
+    var body: some View {
+        ImageEditorPane(state: state)
+            .frame(minWidth: 680, minHeight: 440)
     }
 }
 
