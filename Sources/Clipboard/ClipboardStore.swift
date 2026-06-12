@@ -8,6 +8,17 @@ final class ClipboardStore {
     /// single instance — never open a second connection to the same file.
     static let shared: ClipboardStore? = try? ClipboardStore.onDisk()
 
+    /// Posted (on the main queue) after any operation that removed history
+    /// items. The capture module listens to reclaim staged "Delete & Copy"
+    /// files whose owning entry is gone (see ClipboardStaging).
+    static let didRemoveItems = Notification.Name("ClipboardStore.didRemoveItems")
+
+    private static func notifyRemoval() {
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: didRemoveItems, object: nil)
+        }
+    }
+
     private let dbQueue: DatabaseQueue
 
     init(dbQueue: DatabaseQueue) throws {
@@ -106,36 +117,62 @@ final class ClipboardStore {
     }
 
     func delete(id: Int64) throws {
-        _ = try dbQueue.write { db in try ClipboardItem.deleteOne(db, key: id) }
+        let removed = try dbQueue.write { db in try ClipboardItem.deleteOne(db, key: id) }
+        if removed { Self.notifyRemoval() }
     }
 
     /// Deletes every item carrying any of the given exact (type, data)
     /// representations — used when a capture is discarded from the preview
     /// window so the dead file doesn't linger in the paste picker.
     func deleteItems(withRepresentations representations: [(type: String, data: Data)]) throws {
-        try dbQueue.write { db in
+        let removed = try dbQueue.write { db -> Int in
+            var total = 0
             for rep in representations {
                 try db.execute(sql: """
                     DELETE FROM clipboardItem WHERE id IN
                     (SELECT itemId FROM itemRepresentation WHERE type = ? AND data = ?)
                     """, arguments: [rep.type, rep.data])
+                total += db.changesCount
             }
+            return total
         }
+        if removed > 0 { Self.notifyRemoval() }
     }
 
     func deleteAllUnpinned() throws {
-        _ = try dbQueue.write { db in try ClipboardItem.filter(Column("pinned") == false).deleteAll(db) }
+        let removed = try dbQueue.write { db in
+            try ClipboardItem.filter(Column("pinned") == false).deleteAll(db)
+        }
+        if removed > 0 { Self.notifyRemoval() }
     }
 
     /// Keeps the newest `maxItems` UNPINNED items; pinned items always survive.
     func prune(keeping maxItems: Int) throws {
-        try dbQueue.write { db in
+        let removed = try dbQueue.write { db -> Bool in
             let staleIds = try Int64.fetchAll(db, sql: """
                 SELECT id FROM clipboardItem WHERE pinned = 0
                 ORDER BY createdAt DESC, id DESC LIMIT -1 OFFSET ?
                 """, arguments: [maxItems])
-            guard !staleIds.isEmpty else { return }
+            guard !staleIds.isEmpty else { return false }
             _ = try ClipboardItem.filter(staleIds.contains(Column("id"))).deleteAll(db)
+            return true
         }
+        if removed { Self.notifyRemoval() }
+    }
+
+    /// File paths (standardized) decoded from every stored `public.file-url`
+    /// representation that point inside `directory`. Drives the capture
+    /// staging sweep: a staged file no history item references is reclaimable.
+    func referencedFilePaths(under directory: URL) throws -> Set<String> {
+        let blobs = try dbQueue.read { db in
+            try Data.fetchAll(db, sql: "SELECT data FROM itemRepresentation WHERE type = ?",
+                              arguments: ["public.file-url"])
+        }
+        let prefix = directory.standardizedFileURL.path
+        return Set(blobs.compactMap { data in
+            guard let url = URL(dataRepresentation: data, relativeTo: nil) else { return nil }
+            let path = url.standardizedFileURL.path
+            return path.hasPrefix(prefix) ? path : nil
+        })
     }
 }

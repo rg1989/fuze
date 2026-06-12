@@ -9,6 +9,7 @@ final class CaptureController {
     private let recorder = RecordingService()
     private let hud = RecHUD()
     private var reviews: [CaptureReviewWindowController] = []
+    private var historyObserver: NSObjectProtocol?
 
     static let defaultScreenshotFolder = NSHomeDirectory() + "/Pictures/Fuse Screenshots"
     static let defaultRecordingFolder = NSHomeDirectory() + "/Movies/Fuse Recordings"
@@ -58,6 +59,15 @@ final class CaptureController {
         hud.onStop = { [weak self] in self?.recorder.stop() }
         hud.onStart = { [weak self] in self?.recorder.startArmed() }
         hud.onCancel = { [weak self] in self?.recorder.cancelArmed() }
+
+        // Reclaim staged "Delete & Copy" clips: orphans on launch, then every
+        // time the clipboard history evicts entries (prune, delete, clear).
+        sweepStagedClips()
+        historyObserver = NotificationCenter.default.addObserver(
+            forName: ClipboardStore.didRemoveItems, object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.sweepStagedClips()
+        }
 
         // Hotkeys are automatically silenced by PauseManager via
         // KeyboardShortcuts.isEnabled — no pause handling needed here.
@@ -237,26 +247,32 @@ final class CaptureController {
             finish(copying: nil)
             return
         }
-        // Delete & Copy: a clipboard file URL must stay readable, so the
-        // clip is staged in the temp directory (the OS cleans it up later)
-        // instead of the recordings folder.
-        let staged = FileManager.default.temporaryDirectory
-            .appendingPathComponent("fuse-clip-\(url.lastPathComponent)")
-        try? FileManager.default.removeItem(at: staged)
-        if let trim {
-            VideoExporter.exportTrimmed(source: url, range: trim, to: staged) { [weak self] ok in
-                self?.trashCapture(at: url)
-                finish(copying: ok ? staged : nil)
+        // Delete & Copy: a clipboard file URL must stay readable, so the clip
+        // moves to the app-managed staging folder, where it lives exactly as
+        // long as its clipboard-history entry does (see ClipboardStaging).
+        do {
+            if let trim {
+                let staged = try ClipboardStaging.reserveURL(forFileName: url.lastPathComponent)
+                VideoExporter.exportTrimmed(source: url, range: trim, to: staged) { [weak self] ok in
+                    self?.trashCapture(at: url)
+                    finish(copying: ok ? staged : nil)
+                }
+            } else {
+                finish(copying: try ClipboardStaging.stage(url))
             }
-        } else {
-            do {
-                try FileManager.default.moveItem(at: url, to: staged)
-                finish(copying: staged)
-            } catch {
-                Log.capture.error("failed to stage clip for clipboard: \(error.localizedDescription, privacy: .public)")
-                finish(copying: nil)
-            }
+        } catch {
+            Log.capture.error("failed to stage clip for clipboard: \(error.localizedDescription, privacy: .public)")
+            finish(copying: nil)
         }
+    }
+
+    /// Staged clips live only while a clipboard-history item references them.
+    private func sweepStagedClips() {
+        var referenced: Set<String> = []
+        if let store = ClipboardStore.shared {
+            referenced = (try? store.referencedFilePaths(under: ClipboardStaging.directory)) ?? []
+        }
+        ClipboardStaging.sweep(referencedPaths: referenced)
     }
 
     private func trashCapture(at url: URL) {
