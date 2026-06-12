@@ -54,12 +54,14 @@ struct CaptureSettingsView: View {
                     Text("MP4").tag("mp4")
                     Text("MOV").tag("mov")
                 }
-                Toggle("Copy capture to clipboard", isOn: $copyToClipboard)
-                Toggle("Show preview after capture", isOn: $showPreviewAfter)
+                Toggle("Show review window after capture", isOn: $showPreviewAfter)
+                Toggle("Auto-copy to clipboard (only when review is off)",
+                       isOn: $copyToClipboard)
+                    .disabled(showPreviewAfter)
             } header: {
                 Text("Output")
             } footer: {
-                Text("The preview offers Keep (Return) and Delete (Esc). Delete moves the file to the Trash and removes it from the clipboard.")
+                Text("The review window lets you annotate screenshots and trim recordings, then choose Delete, Delete & Copy, Save, or Save & Copy (Return = Save & Copy, Esc = Delete, ⌘S = Save). Nothing is copied to the clipboard unless you pick a Copy action. With the review window off, captures save silently — enable auto-copy to also place them on the clipboard.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
