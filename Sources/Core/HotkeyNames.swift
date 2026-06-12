@@ -10,6 +10,9 @@ extension KeyboardShortcuts.Name {
     // Notifications (Phase 7)
     static let clearNotifications = Self("clearNotifications", default: .init(.delete, modifiers: [.control, .option]))
 
+    // Downloader (Phase 6) — open the Downloads window from anywhere
+    static let openDownloads = Self("openDownloads", default: .init(.d, modifiers: [.control, .option]))
+
     // Notes (Phase 8)
     static let toggleNotesPanel = Self("toggleNotesPanel", default: .init(.m, modifiers: [.control, .option]))
 

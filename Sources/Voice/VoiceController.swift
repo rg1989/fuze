@@ -44,6 +44,8 @@ final class VoiceController: ObservableObject {
             "voice.language": "en",
             "voice.removeFillers": true,
             "voice.activationMode": "hold",
+            VoiceSounds.stopKey: "Tink",
+            VoiceSounds.finishKey: "Glass",
             ModifierHoldMonitor.defaultsKey: 0,
         ])
 
@@ -158,6 +160,7 @@ final class VoiceController: ObservableObject {
             execute(session.handle(.transcriptionFailed))
             return
         }
+        VoiceSounds.playStopped()   // valid take captured — stopped listening
 
         let modelName = configuredModelName
         let language = configuredLanguage
@@ -212,14 +215,18 @@ final class VoiceController: ObservableObject {
             execute(session.handle(.transcriptionFinished))
             return
         }
+        // Always keep the transcript on the clipboard so it's never lost, then
+        // paste it at the cursor when Accessibility allows.
         if PermissionsService.hasAccessibility {
-            PasteService.paste(text: cleaned, restoreAfter: 0.6)
+            PasteService.pasteKeepingOnClipboard(text: cleaned)
             hud.hide()
         } else {
-            Log.voice.error("accessibility missing; cannot paste transcript")
-            hud.flash("Grant Accessibility to paste", hideAfter: 2.5)
+            PasteService.copyToClipboard(text: cleaned)
+            Log.voice.error("accessibility missing; transcript copied to clipboard, not pasted")
+            hud.flash("Copied to clipboard — grant Accessibility to auto-paste", hideAfter: 2.5)
             PermissionsService.promptForAccessibility()
         }
+        VoiceSounds.playFinished()
         execute(session.handle(.transcriptionFinished))
     }
 

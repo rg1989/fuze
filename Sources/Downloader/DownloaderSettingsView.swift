@@ -1,4 +1,5 @@
 import AppKit
+import KeyboardShortcuts
 import SwiftUI
 
 struct DownloaderSettingsView: View {
@@ -13,6 +14,12 @@ struct DownloaderSettingsView: View {
 
     var body: some View {
         Form {
+            Section("Shortcut") {
+                KeyboardShortcuts.Recorder("Open Downloads window", name: .openDownloads)
+                Text("Opens the Downloads window from anywhere, even when Fuse isn't focused.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             Section("Destination") {
                 LabeledContent("Save to") {
                     HStack {

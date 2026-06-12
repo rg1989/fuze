@@ -10,13 +10,13 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .general: return "General"
-        case .scroll: return "Scroll"
-        case .tiling: return "Tiling"
-        case .clipboard: return "Clipboard"
-        case .voice: return "Voice"
-        case .capture: return "Capture"
-        case .downloads: return "Downloads"
-        case .notifications: return "Notifications"
+        case .scroll: return "Scroll Reverser"
+        case .tiling: return "Tiling Manager"
+        case .clipboard: return "Clipboard Manager"
+        case .voice: return "Speech to Text"
+        case .capture: return "Capture Image/Video"
+        case .downloads: return "Download Videos by URL"
+        case .notifications: return "Notifications Cleaner"
         case .notes: return "Notes"
         }
     }
@@ -63,8 +63,11 @@ struct SettingsRootView: View {
                             .frame(height: 20)
                         Text(tab.title)
                             .font(.caption)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.8)
                     }
-                    .frame(width: 84, height: 52)
+                    .frame(width: 86, height: 56)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)

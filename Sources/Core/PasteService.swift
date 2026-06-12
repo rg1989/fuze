@@ -53,6 +53,19 @@ enum PasteService {
         paste([[.string: Data(text.utf8)]], restoreAfter: seconds)
     }
 
+    /// Paste `text` and LEAVE it on the clipboard afterwards (no restore), so a
+    /// transcript is never lost if it lands somewhere that can't hold text.
+    /// Written non-internal so it's recorded in Fuse's own clipboard history.
+    static func pasteKeepingOnClipboard(text: String) {
+        write([[.string: Data(text.utf8)]], markInternal: false)
+        synthesizeCmdV()
+    }
+
+    /// Put `text` on the clipboard without pasting (no Accessibility needed).
+    static func copyToClipboard(text: String) {
+        write([[.string: Data(text.utf8)]], markInternal: false)
+    }
+
     /// Requires Accessibility permission; otherwise the events are silently dropped.
     static func synthesizeCmdV() {
         guard let source = CGEventSource(stateID: .combinedSessionState) else { return }

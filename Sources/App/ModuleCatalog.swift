@@ -11,13 +11,13 @@ struct FuseModule: Identifiable, Equatable {
     var id: String { key }
 
     static let all: [FuseModule] = [
-        FuseModule(key: "scroll.enabled", title: "Scroll", icon: "computermouse"),
-        FuseModule(key: "tiling.enabled", title: "Tiling", icon: "rectangle.split.2x1"),
-        FuseModule(key: "clipboard.enabled", title: "Clipboard", icon: "doc.on.clipboard"),
-        FuseModule(key: "voice.enabled", title: "Voice", icon: "mic"),
-        FuseModule(key: "capture.enabled", title: "Capture", icon: "camera.viewfinder"),
-        FuseModule(key: "downloads.enabled", title: "Downloads", icon: "arrow.down.circle"),
-        FuseModule(key: "notifications.enabled", title: "Notifications", icon: "bell.badge"),
+        FuseModule(key: "scroll.enabled", title: "Scroll Reverser", icon: "computermouse"),
+        FuseModule(key: "tiling.enabled", title: "Tiling Manager", icon: "rectangle.split.2x1"),
+        FuseModule(key: "clipboard.enabled", title: "Clipboard Manager", icon: "doc.on.clipboard"),
+        FuseModule(key: "voice.enabled", title: "Speech to Text", icon: "mic"),
+        FuseModule(key: "capture.enabled", title: "Capture Image/Video", icon: "camera.viewfinder"),
+        FuseModule(key: "downloads.enabled", title: "Download Videos by URL", icon: "arrow.down.circle"),
+        FuseModule(key: "notifications.enabled", title: "Notifications Cleaner", icon: "bell.badge"),
         FuseModule(key: "notes.enabled", title: "Notes", icon: "note.text"),
     ]
 }
@@ -41,7 +41,9 @@ struct ModuleCard: View {
             Text(module.title)
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(enabled ? Color.primary : Color.secondary)
-                .lineLimit(1)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
+                .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 4)
             Toggle("", isOn: $enabled)
                 .toggleStyle(.switch)
@@ -63,7 +65,7 @@ struct ModuleCard: View {
 
 /// The "fused apps" grid shown at the top of General settings.
 struct ModuleGrid: View {
-    private let columns = [GridItem(.adaptive(minimum: 158), spacing: 8)]
+    private let columns = [GridItem(.adaptive(minimum: 172), spacing: 8)]
 
     var body: some View {
         LazyVGrid(columns: columns, spacing: 8) {

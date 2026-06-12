@@ -7,6 +7,8 @@ struct VoiceSettingsView: View {
     @AppStorage("voice.language") private var language = "en"
     @AppStorage("voice.removeFillers") private var removeFillers = true
     @AppStorage("voice.activationMode") private var activationMode = "hold"
+    @AppStorage(VoiceSounds.stopKey) private var stopSound = "Tink"
+    @AppStorage(VoiceSounds.finishKey) private var finishSound = "Glass"
     @AppStorage(ModifierHoldMonitor.defaultsKey) private var modifierMask = 0
     @ObservedObject private var controller = VoiceController.shared
     @State private var micStatus = PermissionsService.microphoneStatus
@@ -79,6 +81,14 @@ struct VoiceSettingsView: View {
                     .foregroundStyle(.secondary)
             }
 
+            Section("Sounds") {
+                soundPicker("When recording stops", selection: $stopSound)
+                soundPicker("When transcript is ready", selection: $finishSound)
+                Text("Plays a sound as dictation stops listening and when the transcript is ready. The transcript is always copied to your clipboard too, so it's never lost even if it can't be pasted.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("Permissions") {
                 permissionRow(
                     title: "Microphone",
@@ -99,7 +109,7 @@ struct VoiceSettingsView: View {
             }
 
             Section("Test dictation") {
-                Text("Click into any text field (e.g. TextEdit), hold the shortcut, speak, release. The transcript is pasted at the cursor and your previous clipboard is restored.")
+                Text("Click into any text field (e.g. TextEdit), hold the shortcut, speak, release. The transcript is pasted at the cursor and also kept on your clipboard.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
@@ -138,6 +148,17 @@ struct VoiceSettingsView: View {
         }
         captureMonitor = nil
         capturingModifiers = false
+    }
+
+    @ViewBuilder
+    private func soundPicker(_ title: String, selection: Binding<String>) -> some View {
+        Picker(title, selection: selection) {
+            Text("None").tag("None")
+            ForEach(VoiceSounds.systemSoundNames, id: \.self) { name in
+                Text(name).tag(name)
+            }
+        }
+        .onChange(of: selection.wrappedValue) { _, new in VoiceSounds.preview(new) }
     }
 
     @ViewBuilder

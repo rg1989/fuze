@@ -1,4 +1,5 @@
 import AppKit
+import KeyboardShortcuts
 import SwiftUI
 
 /// Closes on Esc: cancelOperation(_:) reaches the window when no view in the
@@ -26,6 +27,12 @@ final class DownloaderController: NSObject {
             Log.downloader.info("yt-dlp not installed; user must install from Settings → Downloads")
         }
         autoUpdateYtDlpIfDue()
+
+        // Global hotkey: open the Downloads window from anywhere, even when
+        // Fuse isn't the active app (the ⌘D menu item only works when it is).
+        KeyboardShortcuts.onKeyUp(for: .openDownloads) { [weak self] in
+            self?.openDownloadsWindow()
+        }
     }
 
     /// Keep an already-installed yt-dlp current so the downloader supports the

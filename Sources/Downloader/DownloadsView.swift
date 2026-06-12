@@ -27,8 +27,15 @@ struct DownloadsView: View {
                     .textFieldStyle(.roundedBorder)
                     .onSubmit(submit)
                 Button("Paste") {
-                    if let text = NSPasteboard.general.string(forType: .string) {
-                        urlText = text
+                    // A link copied from some apps lands as public.url with no
+                    // plain string, so read both, then any URL object.
+                    let pb = NSPasteboard.general
+                    let pasted = pb.string(forType: .string)
+                        ?? pb.string(forType: NSPasteboard.PasteboardType("public.url"))
+                        ?? (pb.readObjects(forClasses: [NSURL.self], options: nil)?
+                                .first as? URL)?.absoluteString
+                    if let pasted {
+                        urlText = pasted.trimmingCharacters(in: .whitespacesAndNewlines)
                     }
                 }
                 Button("Download", action: submit)
