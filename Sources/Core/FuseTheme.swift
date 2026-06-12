@@ -52,18 +52,18 @@ struct HUDPillChrome: ViewModifier {
             .background {
                 ZStack {
                     HUDBlur()
-                    Color.black.opacity(0.18)
+                    Color.black.opacity(0.28)
                 }
                 .clipShape(Capsule())
             }
             .overlay(
                 Capsule().strokeBorder(
                     LinearGradient(
-                        colors: [.white.opacity(0.40), .white.opacity(0.06)],
+                        colors: [.white.opacity(0.22), .white.opacity(0.04)],
                         startPoint: .top, endPoint: .bottom),
                     lineWidth: 1)
             )
-            .shadow(color: .black.opacity(0.35), radius: 16, y: 6)
+            .shadow(color: .black.opacity(0.45), radius: 20, y: 8)
     }
 }
 
