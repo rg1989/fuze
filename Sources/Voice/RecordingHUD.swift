@@ -14,72 +14,6 @@ final class RecordingHUDModel: ObservableObject {
     @Published var display: Display = .hidden
 }
 
-/// Pulsing recording-red orb with a soft glow — the "live mic" indicator.
-private struct GlowOrb: View {
-    var body: some View {
-        TimelineView(.animation(minimumInterval: 1 / 30)) { context in
-            let t = context.date.timeIntervalSinceReferenceDate
-            let pulse = 0.5 + 0.5 * sin(t * 3.0)
-            ZStack {
-                Circle()
-                    .fill(FuseTheme.recordingRed.opacity(0.25 + 0.25 * pulse))
-                    .frame(width: 22, height: 22)
-                    .blur(radius: 6)
-                Circle()
-                    .fill(LinearGradient(
-                        colors: [FuseTheme.recordingRedBright, FuseTheme.recordingRed],
-                        startPoint: .top, endPoint: .bottom))
-                    .frame(width: 12, height: 12)
-                    .shadow(color: FuseTheme.recordingRed.opacity(0.5 + 0.3 * pulse),
-                            radius: 4 + 4 * pulse)
-            }
-            .frame(width: 24, height: 24)
-        }
-    }
-}
-
-/// Five animated equalizer bars, phase-shifted so they dance independently.
-private struct EqualizerBars: View {
-    var body: some View {
-        TimelineView(.animation(minimumInterval: 1 / 30)) { context in
-            let t = context.date.timeIntervalSinceReferenceDate
-            HStack(spacing: 3) {
-                ForEach(0..<5, id: \.self) { index in
-                    let phase = Double(index) * 0.9
-                    let height = 5 + 13 * abs(sin(t * 2.7 + phase) * sin(t * 1.6 + phase * 1.4))
-                    Capsule()
-                        .fill(LinearGradient(
-                            colors: [FuseTheme.recordingRedBright, FuseTheme.recordingRed],
-                            startPoint: .top, endPoint: .bottom))
-                        .frame(width: 3, height: height)
-                }
-            }
-            .frame(width: 27, height: 20)
-        }
-    }
-}
-
-/// Rotating angular-gradient ring — the transcription spinner (deep orange).
-private struct TranscribeRing: View {
-    var body: some View {
-        TimelineView(.animation(minimumInterval: 1 / 30)) { context in
-            let t = context.date.timeIntervalSinceReferenceDate
-            Circle()
-                .stroke(
-                    AngularGradient(
-                        colors: [FuseTheme.transcribeOrange.opacity(0.0),
-                                 FuseTheme.transcribeOrange,
-                                 FuseTheme.transcribeOrangeDeep],
-                        center: .center),
-                    style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                .frame(width: 17, height: 17)
-                .rotationEffect(.radians(t * 2.6))
-                .shadow(color: FuseTheme.transcribeOrange.opacity(0.5), radius: 5)
-                .frame(width: 24, height: 24)
-        }
-    }
-}
-
 struct RecordingHUDView: View {
     @ObservedObject var model: RecordingHUDModel
 
@@ -89,13 +23,15 @@ struct RecordingHUDView: View {
             case .hidden:
                 EmptyView()
             case .recording:
-                GlowOrb()
-                EqualizerBars()
+                HUDGlowDot()
+                HUDEqualizerBars()
                 ShimmerText(text: "RECORDING",
                             base: FuseTheme.recordingRedBright,
                             highlight: FuseTheme.recordingRedShine)
             case .transcribing:
-                TranscribeRing()
+                HUDTranscribeRing()
+                HUDEqualizerBars(bright: FuseTheme.transcribeOrangeShine,
+                                 base: FuseTheme.transcribeOrange)
                 ShimmerText(text: "TRANSCRIBING",
                             base: FuseTheme.transcribeOrange,
                             highlight: FuseTheme.transcribeOrangeShine)
@@ -112,8 +48,9 @@ struct RecordingHUDView: View {
                     .fixedSize(horizontal: true, vertical: false)
             }
         }
+        .frame(minHeight: 27)   // identical pill height in every state
         .padding(.horizontal, 19)
-        .padding(.vertical, 13)
+        .padding(.vertical, 11)
         .hudPillChrome()
         .padding(24)   // room for the shadow inside the borderless panel
     }
