@@ -74,16 +74,16 @@ tell application "Finder"
     set current view of container window to icon view
     set toolbar visible of container window to false
     set statusbar visible of container window to false
-    -- window bounds {left, top, right, bottom}: 660×400 content
-    set the bounds of container window to {200, 120, 860, 520}
+    -- window bounds {left, top, right, bottom}: 660×340 content
+    set the bounds of container window to {200, 120, 860, 460}
     set viewOptions to the icon view options of container window
     set arrangement of viewOptions to not arranged
     set icon size of viewOptions to 128
     set text size of viewOptions to 13
     set background picture of viewOptions to file ".background:background.png"
     -- positions are icon centers in window coords (top-left origin)
-    set position of item "Fuse.app" of container window to {165, 185}
-    set position of item "Applications" of container window to {495, 185}
+    set position of item "Fuse.app" of container window to {165, 160}
+    set position of item "Applications" of container window to {495, 160}
     close
     open
     update without registering applications
