@@ -10,31 +10,6 @@ final class RecHUDModel: ObservableObject {
     var onStop: (() -> Void)?
 }
 
-/// Recording dot with a soft pulsing glow.
-private struct RecPulseDot: View {
-    var hollow = false
-
-    var body: some View {
-        TimelineView(.animation(minimumInterval: 1 / 30)) { context in
-            let t = context.date.timeIntervalSinceReferenceDate
-            let pulse = 0.5 + 0.5 * sin(t * 3.2)
-            let gradient = LinearGradient(
-                colors: [FuseTheme.recordingRedBright, FuseTheme.recordingRed],
-                startPoint: .top, endPoint: .bottom)
-            Group {
-                if hollow {
-                    Circle().strokeBorder(gradient, lineWidth: 2.5)
-                } else {
-                    Circle().fill(gradient)
-                }
-            }
-            .frame(width: 12, height: 12)
-            .shadow(color: FuseTheme.recordingRed.opacity(0.45 + 0.35 * pulse),
-                    radius: 5 + 3 * pulse)
-        }
-    }
-}
-
 struct RecHUDView: View {
     @ObservedObject var model: RecHUDModel
 
@@ -42,39 +17,36 @@ struct RecHUDView: View {
         HStack(spacing: 12) {
             switch model.mode {
             case .armed:
-                RecPulseDot(hollow: true)
-                Text("Ready to record")
-                    .font(FuseTheme.hudFont(size: 13.5, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.92))
+                HUDGlowDot(hollow: true)
+                ShimmerText(text: "READY",
+                            base: FuseTheme.recordingRedBright,
+                            highlight: FuseTheme.recordingRedShine)
                 Button { model.onStart?() } label: {
                     Label("Start", systemImage: "record.circle.fill")
-                        .font(.system(size: 13, weight: .semibold))
-                        .padding(.horizontal, 4)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(FuseTheme.recordingRed)
-                .controlSize(.large)
+                .buttonStyle(.hudRecordRed)
                 .keyboardShortcut(.defaultAction)
                 Button("Cancel") { model.onCancel?() }
-                    .buttonStyle(.bordered)
-                    .controlSize(.large)
-                    .tint(.white)
+                    .buttonStyle(.hudGhost)
+                    .keyboardShortcut(.cancelAction)
             case .recording:
-                RecPulseDot()
+                HUDGlowDot()
+                ShimmerText(text: "REC",
+                            base: FuseTheme.recordingRedBright,
+                            highlight: FuseTheme.recordingRedShine)
                 Text(model.elapsedText)
                     .font(FuseTheme.hudFont(size: 14, weight: .semibold, italic: false))
                     .monospacedDigit()
                     .foregroundStyle(.white.opacity(0.92))
                 Button { model.onStop?() } label: {
                     Label("Stop", systemImage: "stop.fill")
-                        .font(.system(size: 12, weight: .semibold))
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(FuseTheme.recordingRed)
+                .buttonStyle(.hudRecordRed)
             }
         }
+        .frame(minHeight: 27)
         .padding(.horizontal, 18)
-        .padding(.vertical, 12)
+        .padding(.vertical, 11)
         .hudPillChrome()
         .padding(20)   // room for the shadow inside the borderless panel
     }
@@ -166,12 +138,15 @@ final class RecHUD {
                 styleMask: [.borderless, .nonactivatingPanel],
                 backing: .buffered,
                 defer: false)
-            panel.level = .screenSaver
+            // One step ABOVE the region-picker overlay (.screenSaver), so the
+            // Stop/Start/Cancel controls always render over the dim backdrop.
+            panel.level = NSWindow.Level(rawValue: NSWindow.Level.screenSaver.rawValue + 1)
             panel.isOpaque = false
             panel.backgroundColor = .clear
             panel.hasShadow = false
             panel.isReleasedWhenClosed = false
             panel.hidesOnDeactivate = false
+            panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
             let hosting = NSHostingView(rootView: RecHUDView(model: model))
             panel.contentView = hosting
             self.hosting = hosting
