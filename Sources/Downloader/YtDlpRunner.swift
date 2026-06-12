@@ -48,7 +48,8 @@ final class YtDlpRunner {
 
     // MARK: - Metadata
 
-    func fetchMetadata(url: String) async throws -> VideoMetadata {
+    func fetchMetadata(url: String,
+                       onStatus: @escaping @MainActor (String) -> Void) async throws -> VideoMetadata {
         guard ToolManager.shared.ytDlpInstalled else { throw RunnerError.ytDlpMissing }
         let ytDlp = ToolManager.shared.ytDlpURL
         return try await withCheckedThrowingContinuation { continuation in
@@ -64,14 +65,27 @@ final class YtDlpRunner {
 
                 // Drain stderr asynchronously so a chatty stderr can never fill
                 // its 64 KB pipe buffer and deadlock the stdout read below.
+                // yt-dlp narrates each extraction step here ("Downloading
+                // webpage", …) — surface it so the long -J phase isn't opaque.
                 let stderrSync = DispatchQueue(label: "com.rgv250cc.Fuse.ytdlp.meta.stderr")
                 var stderrData = Data()
+                var statusRemainder = ""
                 stderrPipe.fileHandleForReading.readabilityHandler = { handle in
                     let chunk = handle.availableData
                     if chunk.isEmpty {
                         handle.readabilityHandler = nil
-                    } else {
-                        stderrSync.sync { stderrData.append(chunk) }
+                        return
+                    }
+                    stderrSync.sync {
+                        stderrData.append(chunk)
+                        statusRemainder += String(decoding: chunk, as: UTF8.self)
+                        var lines = statusRemainder.components(separatedBy: "\n")
+                        statusRemainder = lines.removeLast()
+                        for line in lines {
+                            if let step = YtDlpStatus.currentStep(line: line) {
+                                Task { @MainActor in onStatus(step) }
+                            }
+                        }
                     }
                 }
 
@@ -123,6 +137,7 @@ final class YtDlpRunner {
     private final class StreamState {
         private let lock = NSLock()
         private var stdoutRemainder = ""
+        private var stderrRemainder = ""
         private var stderrLines: [String] = []
         private var lastNonProgressLine: String?
 
@@ -154,16 +169,33 @@ final class YtDlpRunner {
             return lastNonProgressLine
         }
 
-        func appendStderr(_ data: Data) {
+        /// Splits incoming stderr bytes into complete lines (buffering any
+        /// partial trailing line). The caller routes each line: yt-dlp's
+        /// progress-template frames land on stderr, so this is where smooth
+        /// progress actually comes from.
+        func appendStderr(_ data: Data) -> [String] {
             lock.lock(); defer { lock.unlock() }
-            let lines = String(decoding: data, as: UTF8.self)
-                .components(separatedBy: "\n")
-                .map { $0.trimmingCharacters(in: .whitespaces) }
-                .filter { !$0.isEmpty }
-            stderrLines.append(contentsOf: lines)
-            if stderrLines.count > 20 {
-                stderrLines.removeFirst(stderrLines.count - 20)
-            }
+            stderrRemainder += String(decoding: data, as: UTF8.self)
+            var lines = stderrRemainder.components(separatedBy: "\n")
+            stderrRemainder = lines.removeLast()
+            return lines
+        }
+
+        /// Returns and clears any unterminated final stderr line.
+        func flushStderrTail() -> String? {
+            lock.lock(); defer { lock.unlock() }
+            let tail = stderrRemainder.trimmingCharacters(in: .whitespacesAndNewlines)
+            stderrRemainder = ""
+            return tail.isEmpty ? nil : tail
+        }
+
+        /// Records a non-progress stderr line into the bounded error-tail ring.
+        func recordStderr(_ line: String) {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            guard !trimmed.isEmpty else { return }
+            lock.lock(); defer { lock.unlock() }
+            stderrLines.append(trimmed)
+            if stderrLines.count > 20 { stderrLines.removeFirst(stderrLines.count - 20) }
         }
 
         var stderrTail: String {
@@ -180,6 +212,7 @@ final class YtDlpRunner {
                        preset: String,
                        destinationPath: String,
                        onProgress: @escaping @MainActor (DownloadProgress) -> Void,
+                       onStatus: @escaping @MainActor (String) -> Void,
                        completion: @escaping @MainActor (Result<String, Error>) -> Void) throws -> DownloadHandle {
         guard ToolManager.shared.ytDlpInstalled else { throw RunnerError.ytDlpMissing }
 
@@ -191,7 +224,10 @@ final class YtDlpRunner {
             ffmpegAvailable: ffmpegPath != nil)
         arguments += [
             "--no-playlist",
+            "--continue",                     // resume a paused .part file in place
             "--newline",
+            "--progress",                     // --print implies --quiet, which SILENCES
+                                              // progress; --progress forces it back on
             "--progress-template", Self.progressTemplate,
             "--print", "after_move:filepath", // final path, after any merge/move
             "--no-simulate",                  // --print alone implies simulation; cancel that
@@ -230,13 +266,24 @@ final class YtDlpRunner {
             }
         }
 
+        // yt-dlp writes progress-template frames AND step narration to stderr;
+        // route each complete line to progress / status / error-tail.
         stderrPipe.fileHandleForReading.readabilityHandler = { handle in
             let data = handle.availableData
             if data.isEmpty {
                 handle.readabilityHandler = nil
                 return
             }
-            state.appendStderr(data)
+            for line in state.appendStderr(data) {
+                if let progress = ProgressParser.parse(line: line) {
+                    Task { @MainActor in onProgress(progress) }
+                } else {
+                    state.recordStderr(line)
+                    if let step = YtDlpStatus.currentStep(line: line) {
+                        Task { @MainActor in onStatus(step) }
+                    }
+                }
+            }
         }
 
         process.terminationHandler = { proc in
@@ -254,7 +301,12 @@ final class YtDlpRunner {
                 state.recordCandidateFilePath(tail)
             }
             if let errRest = try? stderrPipe.fileHandleForReading.readToEnd(), !errRest.isEmpty {
-                state.appendStderr(errRest)
+                for line in state.appendStderr(errRest) where ProgressParser.parse(line: line) == nil {
+                    state.recordStderr(line)
+                }
+            }
+            if let tail = state.flushStderrTail(), ProgressParser.parse(line: tail) == nil {
+                state.recordStderr(tail)
             }
 
             let result: Result<String, Error>

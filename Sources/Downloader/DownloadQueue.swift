@@ -4,6 +4,7 @@ enum DownloadState: Equatable {
     case queued
     case fetchingMetadata
     case downloading
+    case paused
     case finished
     case failed
     case cancelled
@@ -17,6 +18,9 @@ struct DownloadItem: Identifiable, Equatable {
     var progress: DownloadProgress?
     var resultPath: String?
     var errorMessage: String?
+    /// Current step text shown before numeric progress is available
+    /// ("Reading page…", "Merging audio + video…", etc.).
+    var statusDetail: String? = nil
 }
 
 /// Observable download queue. Settings (destination, preset, concurrency)
@@ -89,11 +93,54 @@ final class DownloadQueue: ObservableObject {
             items[index].state = .cancelled
             handles[id]?.cancel()
             handles[id] = nil
+        case .paused:
+            // No running process; the .part file is left for cleanup.
+            items[index].state = .cancelled
         case .finished, .failed, .cancelled:
             return
         }
         pump()
     }
+
+    /// Pause an in-flight download: stop the process but keep its `.part` file
+    /// (and last progress) so `resume` can continue in place via yt-dlp
+    /// --continue. A freed slot lets the next queued item start.
+    func pause(id: UUID) {
+        guard let index = items.firstIndex(where: { $0.id == id }),
+              items[index].state == .downloading else { return }
+        items[index].state = .paused
+        items[index].statusDetail = nil
+        handles[id]?.cancel()   // SIGTERM — yt-dlp keeps the .part file
+        handles[id] = nil
+        pump()
+    }
+
+    /// Resume a paused download. Re-queues it (respecting maxConcurrent);
+    /// `start` skips the metadata fetch since we already have it, and
+    /// yt-dlp --continue picks up the partial file.
+    func resume(id: UUID) {
+        guard let index = items.firstIndex(where: { $0.id == id }),
+              items[index].state == .paused else { return }
+        items[index].state = .queued
+        pump()
+    }
+
+    /// Remove all completed downloads from the list (files stay on disk).
+    func clearFinished() {
+        items.removeAll { $0.state == .finished }
+        pump()
+    }
+
+    /// Remove all failed and cancelled downloads from the list.
+    func clearFailed() {
+        let removable: Set<DownloadState> = [.failed, .cancelled]
+        for item in items where removable.contains(item.state) { handles[item.id] = nil }
+        items.removeAll { removable.contains($0.state) }
+        pump()
+    }
+
+    var hasFinished: Bool { items.contains { $0.state == .finished } }
+    var hasFailed: Bool { items.contains { $0.state == .failed || $0.state == .cancelled } }
 
     func retry(id: UUID) {
         guard let index = items.firstIndex(where: { $0.id == id }),
@@ -102,6 +149,7 @@ final class DownloadQueue: ObservableObject {
         items[index].progress = nil
         items[index].resultPath = nil
         items[index].errorMessage = nil
+        items[index].statusDetail = nil
         pump()
     }
 
@@ -124,12 +172,21 @@ final class DownloadQueue: ObservableObject {
 
     private func start(itemAt index: Int) {
         let id = items[index].id
+        // Resume/retry already have metadata — skip the slow `-J` fetch and let
+        // yt-dlp --continue pick up any .part file.
+        if let metadata = items[index].metadata {
+            beginDownload(id: id, metadata: metadata)
+            return
+        }
         let url = items[index].url
         items[index].state = .fetchingMetadata
+        items[index].statusDetail = nil
         Task { [weak self] in
             guard let self else { return }
             do {
-                let metadata = try await self.runner.fetchMetadata(url: url)
+                let metadata = try await self.runner.fetchMetadata(url: url) { [weak self] step in
+                    self?.updateStatus(id: id, step: step)
+                }
                 self.beginDownload(id: id, metadata: metadata)
             } catch {
                 self.markFailed(id: id, error: error)
@@ -139,7 +196,8 @@ final class DownloadQueue: ObservableObject {
 
     private func beginDownload(id: UUID, metadata: VideoMetadata) {
         guard let index = items.firstIndex(where: { $0.id == id }),
-              items[index].state == .fetchingMetadata else { return } // cancelled/removed meanwhile
+              items[index].state == .fetchingMetadata
+                || items[index].state == .queued else { return } // cancelled/removed meanwhile
         items[index].metadata = metadata
         items[index].state = .downloading
         do {
@@ -149,6 +207,9 @@ final class DownloadQueue: ObservableObject {
                 destinationPath: destinationPath,
                 onProgress: { [weak self] progress in
                     self?.updateProgress(id: id, progress: progress)
+                },
+                onStatus: { [weak self] step in
+                    self?.updateStatus(id: id, step: step)
                 },
                 completion: { [weak self] result in
                     self?.finish(id: id, result: result)
@@ -163,6 +224,16 @@ final class DownloadQueue: ObservableObject {
         guard let index = items.firstIndex(where: { $0.id == id }),
               items[index].state == .downloading else { return }
         items[index].progress = progress
+        items[index].statusDetail = nil   // numeric progress supersedes step text
+    }
+
+    /// Surface yt-dlp's current step while there's no numeric progress yet.
+    private func updateStatus(id: UUID, step: String) {
+        guard let index = items.firstIndex(where: { $0.id == id }),
+              items[index].state == .fetchingMetadata
+                || items[index].state == .downloading,
+              items[index].progress == nil else { return }
+        items[index].statusDetail = step
     }
 
     private func finish(id: UUID, result: Result<String, Error>) {
@@ -171,8 +242,10 @@ final class DownloadQueue: ObservableObject {
             pump()
             return
         }
-        if items[index].state == .cancelled {
-            pump() // user already cancelled; ignore the late completion
+        if items[index].state == .cancelled || items[index].state == .paused {
+            // User cancelled or paused; ignore the late process exit so the
+            // .part file and last progress are preserved for resume.
+            pump()
             return
         }
         switch result {

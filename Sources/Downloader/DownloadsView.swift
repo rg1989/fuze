@@ -37,6 +37,18 @@ struct DownloadsView: View {
             }
             .padding(12)
 
+            if !queue.items.isEmpty {
+                HStack(spacing: 8) {
+                    Spacer()
+                    Button("Clear completed") { queue.clearFinished() }
+                        .disabled(!queue.hasFinished)
+                    Button("Clear failed") { queue.clearFailed() }
+                        .disabled(!queue.hasFailed)
+                }
+                .padding(.horizontal, 12)
+                .padding(.bottom, 8)
+            }
+
             Divider()
 
             if queue.items.isEmpty {
@@ -76,8 +88,9 @@ struct DownloadRowView: View {
                 Text(item.metadata?.title ?? item.url)
                     .lineLimit(1)
                     .truncationMode(.middle)
-                if item.state == .downloading {
+                if item.state == .downloading || item.state == .paused {
                     ProgressView(value: min(max((item.progress?.percent ?? 0) / 100.0, 0), 1))
+                        .opacity(item.state == .paused ? 0.5 : 1)
                 }
                 Text(caption)
                     .font(.caption)
@@ -100,6 +113,7 @@ struct DownloadRowView: View {
         case .queued: return "clock"
         case .fetchingMetadata: return "magnifyingglass"
         case .downloading: return "arrow.down.circle"
+        case .paused: return "pause.circle"
         case .finished: return "checkmark.circle.fill"
         case .failed: return "xmark.circle.fill"
         case .cancelled: return "slash.circle"
@@ -111,6 +125,7 @@ struct DownloadRowView: View {
         case .finished: return .green
         case .failed: return .red
         case .downloading: return .accentColor
+        case .paused: return .orange
         case .queued, .fetchingMetadata, .cancelled: return .secondary
         }
     }
@@ -118,13 +133,16 @@ struct DownloadRowView: View {
     private var caption: String {
         switch item.state {
         case .queued: return "Queued"
-        case .fetchingMetadata: return "Fetching video info…"
+        case .fetchingMetadata: return item.statusDetail ?? "Fetching video info…"
         case .downloading:
-            guard let p = item.progress else { return "Starting…" }
+            guard let p = item.progress else { return item.statusDetail ?? "Starting…" }
             var parts = [String(format: "%.1f%%", p.percent)]
             if !p.speed.isEmpty { parts.append(p.speed) }
             if !p.eta.isEmpty { parts.append("ETA \(p.eta)") }
             return parts.joined(separator: " · ")
+        case .paused:
+            guard let p = item.progress else { return "Paused" }
+            return String(format: "Paused · %.1f%%", p.percent)
         case .finished: return item.resultPath ?? "Done"
         case .failed: return item.errorMessage ?? "Failed"
         case .cancelled: return "Cancelled"
@@ -134,10 +152,17 @@ struct DownloadRowView: View {
     @ViewBuilder
     private var actionButtons: some View {
         switch item.state {
-        case .fetchingMetadata, .downloading:
+        case .fetchingMetadata:
+            Button("Cancel") { queue.cancel(id: item.id) }
+        case .downloading:
+            Button("Pause") { queue.pause(id: item.id) }
+            Button("Cancel") { queue.cancel(id: item.id) }
+        case .paused:
+            Button("Resume") { queue.resume(id: item.id) }
             Button("Cancel") { queue.cancel(id: item.id) }
         case .finished:
             Button("Show in Finder") { showInFinder() }
+            Button("Remove") { queue.remove(id: item.id) }
         case .failed, .cancelled:
             Button("Retry") { queue.retry(id: item.id) }
             Button("Remove") { queue.remove(id: item.id) }
