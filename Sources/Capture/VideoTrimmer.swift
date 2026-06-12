@@ -14,6 +14,12 @@ enum TrimMath {
             start: CMTime(seconds: s * duration, preferredTimescale: 600),
             end: CMTime(seconds: e * duration, preferredTimescale: 600))
     }
+
+    /// True when the slider range is effectively the whole clip — Save can
+    /// skip the export entirely.
+    static func isNoOp(start: Double, end: Double, epsilon: Double = 0.001) -> Bool {
+        start <= epsilon && end >= 1 - epsilon
+    }
 }
 
 final class VideoTrimmerState: ObservableObject {

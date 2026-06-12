@@ -37,4 +37,20 @@ final class TrimRangeTests: XCTestCase {
         XCTAssertEqual(r!.start.seconds, 0, accuracy: 0.001)
         XCTAssertEqual(r!.end.seconds, 4, accuracy: 0.001)
     }
+
+    func testFullRangeIsNoOp() {
+        XCTAssertTrue(TrimMath.isNoOp(start: 0, end: 1))
+    }
+
+    func testNearFullRangeIsNoOp() {
+        XCTAssertTrue(TrimMath.isNoOp(start: 0.0005, end: 0.9999))
+    }
+
+    func testTrimmedStartIsNotNoOp() {
+        XCTAssertFalse(TrimMath.isNoOp(start: 0.1, end: 1))
+    }
+
+    func testTrimmedEndIsNotNoOp() {
+        XCTAssertFalse(TrimMath.isNoOp(start: 0, end: 0.9))
+    }
 }
