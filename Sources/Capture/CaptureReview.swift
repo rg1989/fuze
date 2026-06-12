@@ -39,10 +39,9 @@ final class VideoReviewState: ObservableObject {
 }
 
 /// The four-way exit row shown at the bottom of both review windows.
-/// `shortcutsEnabled: false` while a text annotation is being typed, so
-/// Return/Esc go to the text field instead of firing actions.
+/// Esc/Return are handled by the window controller's key monitor (single
+/// press = with copy, quick double press = without); buttons stay clickable.
 struct ReviewActionBar: View {
-    var shortcutsEnabled = true
     var onAction: (ReviewAction) -> Void
 
     var body: some View {
@@ -50,7 +49,6 @@ struct ReviewActionBar: View {
             Button(role: .destructive) { onAction(.delete) } label: {
                 Label(ReviewAction.delete.title, systemImage: "trash")
             }
-            .keyboardShortcut(shortcutsEnabled ? KeyboardShortcut(.escape) : nil)
 
             Button { onAction(.deleteAndCopy) } label: {
                 Label(ReviewAction.deleteAndCopy.title, systemImage: "trash.square")
@@ -58,7 +56,7 @@ struct ReviewActionBar: View {
 
             Spacer()
 
-            Text("Return = Save & Copy · Esc = Delete")
+            Text("↩ save+copy · ↩↩ save · esc delete+copy · esc esc delete")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
 
@@ -71,7 +69,6 @@ struct ReviewActionBar: View {
                 Label(ReviewAction.saveAndCopy.title, systemImage: "doc.on.doc")
             }
             .buttonStyle(.borderedProminent)
-            .keyboardShortcut(shortcutsEnabled ? KeyboardShortcut(.return) : nil)
         }
         .controlSize(.large)
     }
@@ -87,8 +84,7 @@ struct ScreenshotReviewView: View {
         VStack(spacing: 0) {
             ImageEditorPane(state: state)
             Divider()
-            ReviewActionBar(shortcutsEnabled: state.pendingText == nil,
-                            onAction: onAction)
+            ReviewActionBar(onAction: onAction)
                 .padding(12)
         }
         .frame(minWidth: 680, minHeight: 500)
@@ -130,6 +126,11 @@ final class CaptureReviewWindowController {
     private let window: NSWindow
     private let relay: ReviewActionRelay
     private var closeObserver: NSObjectProtocol?
+    private var keyMonitor: Any?
+    /// Pending single-press action, waiting out the double-press window.
+    private var pendingKey: (key: ReviewKey, work: DispatchWorkItem)?
+    /// Two presses of the same key within this interval = the double action.
+    static let doublePressWindow: TimeInterval = 0.35
     /// Set for screenshots — exposes annotations/crop to CaptureController.
     let imageState: ImageEditorState?
     /// Set for recordings — exposes the pending trim range.
@@ -179,19 +180,72 @@ final class CaptureReviewWindowController {
             forName: NSWindow.willCloseNotification, object: window, queue: .main
         ) { [weak self] _ in
             self?.videoState?.player.pause()
+            self?.removeKeyMonitor()
             self?.onClose?()
         }
+        installKeyMonitor()
     }
 
     deinit {
         if let closeObserver {
             NotificationCenter.default.removeObserver(closeObserver)
         }
+        removeKeyMonitor()
+    }
+
+    /// Esc / Return with single-vs-double-press semantics. A local monitor
+    /// (not button shortcuts) so a quick second press can cancel the first
+    /// press's pending action.
+    private func installKeyMonitor() {
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self, event.window === self.window else { return event }
+            // While a text annotation is being typed, Esc/Return belong to
+            // the text field, not the action bar.
+            if let imageState = self.imageState, imageState.pendingText != nil { return event }
+            switch event.keyCode {
+            case 53:        // Esc
+                self.handleKey(.escape)
+                return nil
+            case 36, 76:    // Return / keypad Enter
+                self.handleKey(.return)
+                return nil
+            default:
+                return event
+            }
+        }
+    }
+
+    private func removeKeyMonitor() {
+        if let keyMonitor {
+            NSEvent.removeMonitor(keyMonitor)
+            self.keyMonitor = nil
+        }
+        pendingKey?.work.cancel()
+        pendingKey = nil
+    }
+
+    private func handleKey(_ key: ReviewKey) {
+        if let pending = pendingKey, pending.key == key {
+            // Second press in time: fire the double action instead.
+            pending.work.cancel()
+            pendingKey = nil
+            relay.onAction?(ReviewKeyMap.action(for: key, isDouble: true))
+            return
+        }
+        pendingKey?.work.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.pendingKey = nil
+            self.relay.onAction?(ReviewKeyMap.action(for: key, isDouble: false))
+        }
+        pendingKey = (key, work)
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.doublePressWindow, execute: work)
     }
 
     func show() {
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
+        window.makeFirstResponder(window.contentView)
     }
 
     func close() {

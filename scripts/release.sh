@@ -42,11 +42,49 @@ if [[ -n "${NOTARY_PROFILE:-}" && "$SIGN_ID" != "-" ]]; then
   rm "$OUT/Fuse.zip"
 fi
 
-# DMG
+# DMG — styled drag-to-Applications layout: dark background with an arrow,
+# 128 px icons, fixed window size. Finder layout is applied to a read-write
+# image first, then converted to the compressed final DMG.
 DMG="$OUT/Fuse-$VERSION.dmg"
-mkdir -p "$OUT/dmg-root"
-cp -R "$APP" "$OUT/dmg-root/"
-ln -s /Applications "$OUT/dmg-root/Applications"
-hdiutil create -volname "Fuse" -srcfolder "$OUT/dmg-root" -ov -format UDZO "$DMG"
-rm -rf "$OUT/dmg-root"
+STAGE="$OUT/dmg-root"
+RW_DMG="$OUT/Fuse-rw.dmg"
+mkdir -p "$STAGE/.background"
+cp -R "$APP" "$STAGE/"
+ln -s /Applications "$STAGE/Applications"
+swift scripts/dmg-background.swift "$STAGE/.background/background.png"
+
+hdiutil create -volname "Fuse" -srcfolder "$STAGE" -ov -format UDRW "$RW_DMG"
+hdiutil attach "$RW_DMG" -readwrite -noverify -noautoopen
+# Finder scripting needs Automation permission; a denial must not kill the
+# release — the DMG just ships with the default layout.
+osascript <<'EOF' || echo "WARNING: Finder styling failed (Automation permission?); DMG keeps default layout"
+tell application "Finder"
+  tell disk "Fuse"
+    open
+    set current view of container window to icon view
+    set toolbar visible of container window to false
+    set statusbar visible of container window to false
+    -- window bounds {left, top, right, bottom}: 660×400 content
+    set the bounds of container window to {200, 120, 860, 520}
+    set viewOptions to the icon view options of container window
+    set arrangement of viewOptions to not arranged
+    set icon size of viewOptions to 128
+    set text size of viewOptions to 13
+    set background picture of viewOptions to file ".background:background.png"
+    -- positions are icon centers in window coords (top-left origin)
+    set position of item "Fuse.app" of container window to {165, 185}
+    set position of item "Applications" of container window to {495, 185}
+    close
+    open
+    update without registering applications
+    delay 1
+    close
+  end tell
+end tell
+EOF
+sync
+hdiutil detach "/Volumes/Fuse"
+hdiutil convert "$RW_DMG" -format UDZO -ov -o "$DMG"
+rm -f "$RW_DMG"
+rm -rf "$STAGE"
 echo "Built $DMG"

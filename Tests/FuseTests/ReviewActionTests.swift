@@ -26,4 +26,15 @@ final class ReviewActionTests: XCTestCase {
         XCTAssertEqual(ReviewAction.save.title, "Save")
         XCTAssertEqual(ReviewAction.saveAndCopy.title, "Save & Copy")
     }
+
+    // Single press = the "& Copy" variant; a quick double press drops the copy.
+    func testKeyMapSinglePress() {
+        XCTAssertEqual(ReviewKeyMap.action(for: .return, isDouble: false), .saveAndCopy)
+        XCTAssertEqual(ReviewKeyMap.action(for: .escape, isDouble: false), .deleteAndCopy)
+    }
+
+    func testKeyMapDoublePress() {
+        XCTAssertEqual(ReviewKeyMap.action(for: .return, isDouble: true), .save)
+        XCTAssertEqual(ReviewKeyMap.action(for: .escape, isDouble: true), .delete)
+    }
 }

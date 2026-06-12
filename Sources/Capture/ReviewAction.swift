@@ -30,3 +30,23 @@ enum ReviewAction: String, CaseIterable {
         }
     }
 }
+
+/// The two review-window keys with single/double-press semantics.
+enum ReviewKey {
+    case escape, `return`
+}
+
+/// Pure key → action mapping. Single press = the common case WITH copy;
+/// a quick double press is the quieter variant without touching the
+/// clipboard. (Esc = delete & copy, Esc Esc = delete; Return = save & copy,
+/// Return Return = save.)
+enum ReviewKeyMap {
+    static func action(for key: ReviewKey, isDouble: Bool) -> ReviewAction {
+        switch (key, isDouble) {
+        case (.return, false): return .saveAndCopy
+        case (.return, true): return .save
+        case (.escape, false): return .deleteAndCopy
+        case (.escape, true): return .delete
+        }
+    }
+}

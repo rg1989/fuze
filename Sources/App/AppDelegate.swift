@@ -24,6 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // Hosted unit tests launch this app; never start OS hooks inside a test run.
         guard NSClassFromString("XCTestCase") == nil else { return }
 
+        installMainMenu()
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         statusItem.button?.image = NSImage(
             systemSymbolName: "bolt.circle.fill",
@@ -98,6 +99,51 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 openSettings()
             }
         }
+    }
+
+    /// LSUIElement apps have no visible menu bar, but NSApp.mainMenu still
+    /// routes key equivalents while Fuse is the active app. Without this,
+    /// ⌘V/⌘C/⌘A are dead in every Fuse window (Downloads URL field, search
+    /// fields, settings). File also carries ⌘W (close) and ⌘D (Downloads).
+    @MainActor private func installMainMenu() {
+        let main = NSMenu()
+
+        // App menu (first slot is mandatory; holds Quit).
+        let appItem = NSMenuItem()
+        let appMenu = NSMenu()
+        appMenu.addItem(NSMenuItem(title: "Quit Fuse",
+                                   action: #selector(NSApplication.terminate(_:)),
+                                   keyEquivalent: "q"))
+        appItem.submenu = appMenu
+        main.addItem(appItem)
+
+        let fileItem = NSMenuItem()
+        let fileMenu = NSMenu(title: "File")
+        let downloadsItem = NSMenuItem(title: "Downloads…",
+                                       action: #selector(DownloaderController.openDownloadsWindow),
+                                       keyEquivalent: "d")
+        if downloaderController == nil { downloaderController = DownloaderController() }
+        downloadsItem.target = downloaderController
+        fileMenu.addItem(downloadsItem)
+        fileMenu.addItem(NSMenuItem(title: "Close Window",
+                                    action: #selector(NSWindow.performClose(_:)),
+                                    keyEquivalent: "w"))
+        fileItem.submenu = fileMenu
+        main.addItem(fileItem)
+
+        let editItem = NSMenuItem()
+        let editMenu = NSMenu(title: "Edit")
+        editMenu.addItem(NSMenuItem(title: "Undo", action: Selector(("undo:")), keyEquivalent: "z"))
+        editMenu.addItem(NSMenuItem(title: "Redo", action: Selector(("redo:")), keyEquivalent: "Z"))
+        editMenu.addItem(.separator())
+        editMenu.addItem(NSMenuItem(title: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x"))
+        editMenu.addItem(NSMenuItem(title: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c"))
+        editMenu.addItem(NSMenuItem(title: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v"))
+        editMenu.addItem(NSMenuItem(title: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a"))
+        editItem.submenu = editMenu
+        main.addItem(editItem)
+
+        NSApp.mainMenu = main
     }
 
     /// Gray out menu items whose module is switched off (General → Fused apps).

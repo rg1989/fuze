@@ -61,7 +61,7 @@ struct CaptureSettingsView: View {
             } header: {
                 Text("Output")
             } footer: {
-                Text("The review window lets you annotate screenshots and trim recordings, then choose Delete, Delete & Copy, Save, or Save & Copy (Return = Save & Copy, Esc = Delete, ⌘S = Save). Nothing is copied to the clipboard unless you pick a Copy action. With the review window off, captures save silently — enable auto-copy to also place them on the clipboard.")
+                Text("The review window lets you annotate screenshots and trim recordings, then choose Delete, Delete & Copy, Save, or Save & Copy. Return = Save & Copy, double-Return = Save only; Esc = Delete & Copy, double-Esc = Delete only; ⌘S = Save. Nothing is copied to the clipboard unless a Copy action runs. With the review window off, captures save silently — enable auto-copy to also place them on the clipboard.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

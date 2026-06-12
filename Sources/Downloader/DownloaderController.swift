@@ -1,6 +1,14 @@
 import AppKit
 import SwiftUI
 
+/// Closes on Esc: cancelOperation(_:) reaches the window when no view in the
+/// responder chain claims the key — standard utility-window behavior.
+final class EscClosableWindow: NSWindow {
+    override func cancelOperation(_ sender: Any?) {
+        performClose(nil)
+    }
+}
+
 /// Owns the downloader feature: the shared DownloadQueue and the Downloads window.
 /// Menu items in AppDelegate target the two @objc actions below.
 @MainActor
@@ -20,7 +28,7 @@ final class DownloaderController: NSObject {
     @objc func openDownloadsWindow() {
         guard UserDefaults.standard.bool(forKey: "downloads.enabled") else { return }
         if downloadsWindow == nil {
-            let window = NSWindow(
+            let window = EscClosableWindow(
                 contentRect: NSRect(x: 0, y: 0, width: 560, height: 440),
                 styleMask: [.titled, .closable, .miniaturizable, .resizable],
                 backing: .buffered,

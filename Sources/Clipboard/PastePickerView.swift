@@ -225,9 +225,14 @@ private struct PickerRow: View {
     }
 
     private func loadVisual() async {
+        // A stored thumbnail wins for ANY kind: capture-copied screenshots are
+        // kind "file" (a file URL rides along) but the watcher thumbnailed the
+        // image data — without this, those rows fall back to a generic icon.
+        if let stored = item.thumbnail.flatMap(NSImage.init(data:)) {
+            visual = stored
+            return
+        }
         switch item.kind {
-        case "image":
-            visual = item.thumbnail.flatMap(NSImage.init(data:))
         case "file":
             if let fileURL { visual = await FileThumbnailLoader.thumbnail(for: fileURL) }
         case "link":
