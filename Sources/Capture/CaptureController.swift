@@ -8,9 +8,7 @@ final class CaptureController {
     private let screenshots = ScreenshotService()
     private let recorder = RecordingService()
     private let hud = RecHUD()
-    private var imageEditors: [ImageEditorWindowController] = []
-    private var videoTrimmers: [VideoTrimmerWindowController] = []
-    private var previews: [CapturePreviewWindowController] = []
+    private var reviews: [CaptureReviewWindowController] = []
 
     static let defaultScreenshotFolder = NSHomeDirectory() + "/Pictures/Fuse Screenshots"
     static let defaultRecordingFolder = NSHomeDirectory() + "/Movies/Fuse Recordings"
@@ -146,69 +144,127 @@ final class CaptureController {
             return
         }
 
-        var clipboardChangeCount: Int?
-        if defaults.bool(forKey: "capture.copyToClipboard") {
-            copyToClipboard(dest, kind: kind)
-            // Remembered so a later Delete only clears the clipboard when
-            // Fuse's copy is still the current item.
-            clipboardChangeCount = NSPasteboard.general.changeCount
-        }
+        // The review window owns all clipboard decisions now — nothing is
+        // copied until the user picks a Copy action. Auto-copy only applies
+        // in silent mode (review window disabled).
         if defaults.bool(forKey: "capture.showPreviewAfter") {
-            showPreview(for: dest, kind: kind, clipboardChangeCount: clipboardChangeCount)
+            showReview(for: dest, kind: kind)
+        } else if defaults.bool(forKey: "capture.copyToClipboard") {
+            copyToClipboard(dest, kind: kind)
         }
         Log.capture.info("capture saved: \(dest.path, privacy: .public)")
     }
 
-    // MARK: - Post-capture preview (Keep / Delete / Edit)
+    // MARK: - Post-capture review (Delete / Delete & Copy / Save / Save & Copy)
 
-    private func showPreview(for url: URL, kind: CaptureKind, clipboardChangeCount: Int?) {
-        let preview = CapturePreviewWindowController(fileURL: url, kind: kind)
-        preview.onKeep = { [weak preview] in
-            preview?.close()
+    private func showReview(for url: URL, kind: CaptureKind) {
+        guard let review = CaptureReviewWindowController(fileURL: url, kind: kind) else {
+            return   // unreadable screenshot — already saved; nothing to review
         }
-        preview.onDelete = { [weak self, weak preview] in
-            self?.discardCapture(at: url, kind: kind, clipboardChangeCount: clipboardChangeCount)
-            preview?.close()
+        review.onAction = { [weak self, weak review] action in
+            guard let self, let review else { return }
+            self.perform(action, on: url, kind: kind, review: review)
         }
-        preview.onEdit = { [weak self, weak preview] in
-            preview?.close()
-            self?.openInEditor(url, kind: kind)
+        review.onClose = { [weak self, weak review] in
+            self?.reviews.removeAll { $0 === review }
         }
-        preview.onClose = { [weak self, weak preview] in
-            self?.previews.removeAll { $0 === preview }
-        }
-        previews.append(preview)
-        preview.show()
+        reviews.append(review)
+        review.show()
     }
 
-    /// Delete semantics: file → Trash, system clipboard cleared when Fuse's
-    /// copy is still current, and the item purged from clipboard history.
-    private func discardCapture(at url: URL, kind: CaptureKind, clipboardChangeCount: Int?) {
-        // Build history-matching representations BEFORE trashing — screenshots
-        // are matched by their image bytes (the watcher stores the first
-        // pasteboard item, which for screenshots is the image, not the URL).
-        var representations: [(type: String, data: Data)] = [
-            (Self.fileURLType.rawValue, url.dataRepresentation),
-        ]
-        if kind == .screenshot, let imageData = try? Data(contentsOf: url) {
-            let imageType = ["jpg", "jpeg"].contains(url.pathExtension.lowercased())
-                ? "public.jpeg" : "public.png"
-            representations.append((imageType, imageData))
+    private func perform(_ action: ReviewAction, on url: URL, kind: CaptureKind,
+                         review: CaptureReviewWindowController) {
+        switch kind {
+        case .screenshot:
+            performScreenshotAction(action, on: url, state: review.imageState)
+            review.close()
+        case .recording:
+            performRecordingAction(action, on: url, state: review.videoState,
+                                   review: review)
         }
-        if let store = ClipboardStore.shared {
-            try? store.deleteItems(withRepresentations: representations)
+    }
+
+    private func performScreenshotAction(_ action: ReviewAction, on url: URL,
+                                         state: ImageEditorState?) {
+        // Bake annotations/crop BEFORE copying so a copied file URL points
+        // at the final pixels.
+        if action.keepsFile, let state, !state.isPristine {
+            state.save()
+        }
+        if action.copiesToClipboard, let state,
+           let data = state.clipboardImageData() {
+            var items: [[NSPasteboard.PasteboardType: Data]] = [[.png: data]]
+            if action.keepsFile {
+                items.append([Self.fileURLType: url.dataRepresentation])
+            }
+            // markInternal: false is LOAD-BEARING — Fuse's own clipboard
+            // history must record this item (the watcher skips marked items).
+            PasteService.write(items, markInternal: false)
+        }
+        if !action.keepsFile {
+            trashCapture(at: url)
+        }
+    }
+
+    private func performRecordingAction(_ action: ReviewAction, on url: URL,
+                                        state: VideoReviewState?,
+                                        review: CaptureReviewWindowController) {
+        state?.player.pause()
+        let trim = state?.pendingTrim
+
+        func finish(copying fileURL: URL?) {
+            if action.copiesToClipboard, let fileURL {
+                PasteService.write([[Self.fileURLType: fileURL.dataRepresentation]],
+                                   markInternal: false)
+            }
+            review.close()
         }
 
-        if let clipboardChangeCount,
-           NSPasteboard.general.changeCount == clipboardChangeCount {
-            NSPasteboard.general.clearContents()
+        if action.keepsFile {
+            if let trim {
+                VideoExporter.trimInPlace(url: url, range: trim) { _ in
+                    finish(copying: url)   // trim failure still keeps the original
+                }
+            } else {
+                finish(copying: url)
+            }
+            return
         }
 
+        // Delete variants.
+        guard action.copiesToClipboard else {
+            trashCapture(at: url)
+            finish(copying: nil)
+            return
+        }
+        // Delete & Copy: a clipboard file URL must stay readable, so the
+        // clip is staged in the temp directory (the OS cleans it up later)
+        // instead of the recordings folder.
+        let staged = FileManager.default.temporaryDirectory
+            .appendingPathComponent("fuse-clip-\(url.lastPathComponent)")
+        try? FileManager.default.removeItem(at: staged)
+        if let trim {
+            VideoExporter.exportTrimmed(source: url, range: trim, to: staged) { [weak self] ok in
+                self?.trashCapture(at: url)
+                finish(copying: ok ? staged : nil)
+            }
+        } else {
+            do {
+                try FileManager.default.moveItem(at: url, to: staged)
+                finish(copying: staged)
+            } catch {
+                Log.capture.error("failed to stage clip for clipboard: \(error.localizedDescription, privacy: .public)")
+                finish(copying: nil)
+            }
+        }
+    }
+
+    private func trashCapture(at url: URL) {
         do {
             try FileManager.default.trashItem(at: url, resultingItemURL: nil)
             Log.capture.info("capture discarded to Trash: \(url.lastPathComponent, privacy: .public)")
         } catch {
-            Log.capture.error("failed to trash discarded capture: \(error.localizedDescription, privacy: .public)")
+            Log.capture.error("failed to trash capture: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -229,25 +285,4 @@ final class CaptureController {
         }
     }
 
-    private func openInEditor(_ url: URL, kind: CaptureKind) {
-        switch kind {
-        case .screenshot:
-            guard let editor = ImageEditorWindowController(fileURL: url) else {
-                NSWorkspace.shared.open(url)   // unreadable PNG — fall back
-                return
-            }
-            editor.onClose = { [weak self, weak editor] in
-                self?.imageEditors.removeAll { $0 === editor }
-            }
-            imageEditors.append(editor)
-            editor.show()
-        case .recording:
-            let trimmer = VideoTrimmerWindowController(fileURL: url)
-            trimmer.onClose = { [weak self, weak trimmer] in
-                self?.videoTrimmers.removeAll { $0 === trimmer }
-            }
-            videoTrimmers.append(trimmer)
-            trimmer.show()
-        }
-    }
 }

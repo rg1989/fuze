@@ -226,12 +226,6 @@ final class ImageEditorState: ObservableObject {
         Self.imageData(of: flattened(), forPathExtension: "png")
     }
 
-    func copyFlattened() {
-        guard let data = clipboardImageData() else { return }
-        // markInternal: false — clipboard history records the edited image too.
-        PasteService.write([[.png: data]], markInternal: false)
-    }
-
     func save() {
         guard let data = Self.imageData(of: flattened(),
                                         forPathExtension: fileURL.pathExtension) else { return }
@@ -240,21 +234,6 @@ final class ImageEditorState: ObservableObject {
             Log.capture.info("editor saved over \(self.fileURL.path, privacy: .public)")
         } catch {
             Log.capture.error("editor save failed: \(error.localizedDescription, privacy: .public)")
-        }
-    }
-
-    func saveAs() {
-        guard let data = Self.imageData(of: flattened(), forPathExtension: "png") else { return }
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [.png]
-        panel.nameFieldStringValue = fileURL.lastPathComponent
-        panel.directoryURL = fileURL.deletingLastPathComponent()
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        do {
-            try data.write(to: url)
-            Log.capture.info("editor saved as \(url.path, privacy: .public)")
-        } catch {
-            Log.capture.error("editor save-as failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 }
@@ -381,57 +360,5 @@ struct ImageEditorPane: View {
             .onEnded { value in
                 state.dragEnded(start: value.startLocation, end: value.location)
             }
-    }
-}
-
-/// Transitional wrapper — removed when the standalone editor window goes
-/// away in favor of the capture review window.
-struct ImageEditorView: View {
-    @ObservedObject var state: ImageEditorState
-    var body: some View {
-        ImageEditorPane(state: state)
-            .frame(minWidth: 680, minHeight: 440)
-    }
-}
-
-/// Plain NSWindow hosting the editor. Retained by CaptureController until
-/// the window closes (multiple editors may be open at once).
-final class ImageEditorWindowController {
-    private let window: NSWindow
-    private var closeObserver: NSObjectProtocol?
-
-    var onClose: (() -> Void)?
-
-    init?(fileURL: URL) {
-        guard let image = NSImage(contentsOf: fileURL) else { return nil }
-        let state = ImageEditorState(image: image, fileURL: fileURL)
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0,
-                                width: min(image.size.width + 48, 1200),
-                                height: min(image.size.height + 110, 800)),
-            styleMask: [.titled, .closable, .resizable, .miniaturizable],
-            backing: .buffered,
-            defer: false)
-        window.title = fileURL.lastPathComponent
-        window.contentView = NSHostingView(rootView: ImageEditorView(state: state))
-        window.isReleasedWhenClosed = false
-        window.center()
-        self.window = window
-        closeObserver = NotificationCenter.default.addObserver(
-            forName: NSWindow.willCloseNotification, object: window, queue: .main
-        ) { [weak self] _ in
-            self?.onClose?()
-        }
-    }
-
-    deinit {
-        if let closeObserver {
-            NotificationCenter.default.removeObserver(closeObserver)
-        }
-    }
-
-    func show() {
-        NSApp.activate(ignoringOtherApps: true)
-        window.makeKeyAndOrderFront(nil)
     }
 }
