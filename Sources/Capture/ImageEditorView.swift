@@ -30,6 +30,13 @@ final class ImageEditorState: ObservableObject {
     @Published var pixelatePreview: CGRect?
     @Published var textDraft = ""
 
+    /// True once crop or pixelate has baked into the bitmap — edits that
+    /// don't live in `annotations`.
+    private(set) var pixelsDirty = false
+
+    /// Nothing to bake — Save can leave the file on disk untouched.
+    var isPristine: Bool { annotations.isEmpty && inProgress == nil && !pixelsDirty }
+
     let fileURL: URL
 
     init(image: NSImage, fileURL: URL) {
@@ -172,6 +179,7 @@ final class ImageEditorState: ObservableObject {
         inProgress = nil
         self.cropRect = nil
         cropMode = false
+        pixelsDirty = true
     }
 
     /// Bake a pixelated version of `rect` (image points, top-left origin)
@@ -198,22 +206,35 @@ final class ImageEditorState: ObservableObject {
         let context = CIContext()
         guard let outCG = context.createCGImage(composited, from: ci.extent) else { return }
         image = NSImage(cgImage: outCG, size: image.size)
+        pixelsDirty = true
     }
 
-    static func pngData(of image: NSImage) -> Data? {
+    /// Encodes for the given file extension: jpg/jpeg → JPEG (0.9), anything
+    /// else → PNG. The capture file's own extension decides — never write
+    /// PNG bytes into a .jpg file.
+    static func imageData(of image: NSImage, forPathExtension ext: String) -> Data? {
         guard let tiff = image.tiffRepresentation,
               let rep = NSBitmapImageRep(data: tiff) else { return nil }
+        if ["jpg", "jpeg"].contains(ext.lowercased()) {
+            return rep.representation(using: .jpeg, properties: [.compressionFactor: 0.9])
+        }
         return rep.representation(using: .png, properties: [:])
     }
 
+    /// PNG of the flattened image — what Copy actions put on the clipboard.
+    func clipboardImageData() -> Data? {
+        Self.imageData(of: flattened(), forPathExtension: "png")
+    }
+
     func copyFlattened() {
-        guard let data = Self.pngData(of: flattened()) else { return }
+        guard let data = clipboardImageData() else { return }
         // markInternal: false — clipboard history records the edited image too.
         PasteService.write([[.png: data]], markInternal: false)
     }
 
     func save() {
-        guard let data = Self.pngData(of: flattened()) else { return }
+        guard let data = Self.imageData(of: flattened(),
+                                        forPathExtension: fileURL.pathExtension) else { return }
         do {
             try data.write(to: fileURL)
             Log.capture.info("editor saved over \(self.fileURL.path, privacy: .public)")
@@ -223,7 +244,7 @@ final class ImageEditorState: ObservableObject {
     }
 
     func saveAs() {
-        guard let data = Self.pngData(of: flattened()) else { return }
+        guard let data = Self.imageData(of: flattened(), forPathExtension: "png") else { return }
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.png]
         panel.nameFieldStringValue = fileURL.lastPathComponent
