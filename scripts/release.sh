@@ -53,8 +53,18 @@ cp -R "$APP" "$STAGE/"
 ln -s /Applications "$STAGE/Applications"
 swift scripts/dmg-background.swift "$STAGE/.background/background.png"
 
+# Detach stale Fuse installer volumes from earlier opens/builds — a mounted
+# "Fuse" volume would make this image mount as "Fuse 2", so Finder would
+# style (and detach) the wrong disk.
+for vol in /Volumes/Fuse /Volumes/Fuse\ *; do
+  [ -d "$vol" ] && hdiutil detach "$vol" -force >/dev/null 2>&1 || true
+done
+
 hdiutil create -volname "Fuse" -srcfolder "$STAGE" -ov -format UDRW "$RW_DMG"
-hdiutil attach "$RW_DMG" -readwrite -noverify -noautoopen
+MOUNT=$(hdiutil attach "$RW_DMG" -readwrite -noverify -noautoopen | grep -o '/Volumes/.*' | tail -1)
+if [ "$MOUNT" != "/Volumes/Fuse" ]; then
+  echo "WARNING: unexpected mount point '$MOUNT'; skipping Finder styling"
+else
 # Finder scripting needs Automation permission; a denial must not kill the
 # release — the DMG just ships with the default layout.
 osascript <<'EOF' || echo "WARNING: Finder styling failed (Automation permission?); DMG keeps default layout"
@@ -82,8 +92,9 @@ tell application "Finder"
   end tell
 end tell
 EOF
+fi
 sync
-hdiutil detach "/Volumes/Fuse"
+hdiutil detach "$MOUNT"
 hdiutil convert "$RW_DMG" -format UDZO -ov -o "$DMG"
 rm -f "$RW_DMG"
 rm -rf "$STAGE"
