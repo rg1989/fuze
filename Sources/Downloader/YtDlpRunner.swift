@@ -21,11 +21,23 @@ final class YtDlpRunner {
                 return "Download cancelled."
             case .noOutputPath:
                 return "yt-dlp finished but did not report an output file."
+            case .processFailed(_, let stderrTail):
+                // User-facing: classify the raw stderr into actionable text.
+                // The raw output is preserved in `diagnosticDetail` for logs.
+                return YtDlpFailure.friendlyMessage(stderr: stderrTail)
+            case .metadataDecodingFailed(let detail):
+                return "Could not read video information: \(detail)"
+            }
+        }
+
+        /// Raw, unmapped detail for Console logs (never shown in the UI).
+        var diagnosticDetail: String {
+            switch self {
             case .processFailed(let status, let stderrTail):
                 let detail = stderrTail.isEmpty ? "no error output" : stderrTail
                 return "yt-dlp exited with status \(status): \(detail)"
-            case .metadataDecodingFailed(let detail):
-                return "Could not read video information: \(detail)"
+            default:
+                return errorDescription ?? "unknown error"
             }
         }
     }

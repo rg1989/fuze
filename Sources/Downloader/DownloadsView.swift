@@ -82,8 +82,12 @@ struct DownloadRowView: View {
                 Text(caption)
                     .font(.caption)
                     .foregroundStyle(item.state == .failed ? Color.red : Color.secondary)
-                    .lineLimit(2)
-                    .truncationMode(.middle)
+                    .lineLimit(item.state == .failed ? 4 : 2)
+                    // Failed: wrap and tail-truncate so the actionable message
+                    // reads cleanly. Others: middle-truncate (long file paths).
+                    .truncationMode(item.state == .failed ? .tail : .middle)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .help(item.state == .failed ? (item.errorMessage ?? "") : "")
             }
             Spacer()
             actionButtons

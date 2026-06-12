@@ -132,7 +132,7 @@ final class DownloadQueue: ObservableObject {
                 let metadata = try await self.runner.fetchMetadata(url: url)
                 self.beginDownload(id: id, metadata: metadata)
             } catch {
-                self.markFailed(id: id, message: error.localizedDescription)
+                self.markFailed(id: id, error: error)
             }
         }
     }
@@ -155,7 +155,7 @@ final class DownloadQueue: ObservableObject {
                 })
             handles[id] = handle
         } catch {
-            markFailed(id: id, message: error.localizedDescription)
+            markFailed(id: id, error: error)
         }
     }
 
@@ -186,11 +186,22 @@ final class DownloadQueue: ObservableObject {
                 items[index].state = .cancelled
             } else {
                 items[index].state = .failed
-                items[index].errorMessage = error.localizedDescription
-                Log.downloader.error("failed: \(error.localizedDescription, privacy: .public)")
+                items[index].errorMessage = error.localizedDescription   // friendly
+                Log.downloader.error("failed: \(Self.rawDetail(error), privacy: .public)")
             }
         }
         pump()
+    }
+
+    /// Raw, unmapped error text for logging (the UI shows the friendly
+    /// `localizedDescription`; Console keeps yt-dlp's full stderr tail).
+    private static func rawDetail(_ error: Error) -> String {
+        (error as? YtDlpRunner.RunnerError)?.diagnosticDetail ?? error.localizedDescription
+    }
+
+    private func markFailed(id: UUID, error: Error) {
+        Log.downloader.error("failed: \(Self.rawDetail(error), privacy: .public)")
+        markFailed(id: id, message: error.localizedDescription)   // friendly in UI
     }
 
     private func markFailed(id: UUID, message: String) {
