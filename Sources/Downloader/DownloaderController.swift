@@ -16,12 +16,32 @@ final class DownloaderController: NSObject {
     let queue = DownloadQueue()
     private var downloadsWindow: NSWindow?
 
+    private static let lastUpdateCheckKey = "downloads.ytDlpLastUpdateCheck"
+
     func start() {
         UserDefaults.standard.register(defaults: ["downloads.enabled": true])
         // First-use flow: never auto-download the binary without user action.
         // DownloadsView shows an inline banner pointing at Settings → Downloads.
         if !ToolManager.shared.ytDlpInstalled {
             Log.downloader.info("yt-dlp not installed; user must install from Settings → Downloads")
+        }
+        autoUpdateYtDlpIfDue()
+    }
+
+    /// Keep an already-installed yt-dlp current so the downloader supports the
+    /// widest range of sites over time (yt-dlp ships site fixes almost daily).
+    /// Throttled to once per day; background, non-blocking, best-effort.
+    private func autoUpdateYtDlpIfDue() {
+        guard UserDefaults.standard.bool(forKey: "downloads.enabled"),
+              ToolManager.shared.ytDlpInstalled else { return }
+        let defaults = UserDefaults.standard
+        let lastCheck = defaults.object(forKey: Self.lastUpdateCheckKey) as? Date
+        guard ToolManager.shouldCheckForUpdate(
+            now: Date(), lastCheck: lastCheck,
+            minInterval: ToolManager.autoUpdateInterval) else { return }
+        defaults.set(Date(), forKey: Self.lastUpdateCheckKey)
+        Task.detached(priority: .background) {
+            await ToolManager.shared.autoUpdateIfNeeded()
         }
     }
 

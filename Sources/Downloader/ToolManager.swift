@@ -25,6 +25,14 @@ final class ToolManager {
     static let ytDlpReleaseURL = URL(
         string: "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos")!
 
+    /// Lightweight metadata endpoint for the latest stable release tag.
+    static let ytDlpLatestReleaseAPI = URL(
+        string: "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest")!
+
+    /// At most one auto-update check per day: yt-dlp ships site fixes almost
+    /// daily, so an installed binary that never refreshes slowly loses sites.
+    static let autoUpdateInterval: TimeInterval = 24 * 60 * 60
+
     /// ~/Library/Application Support/Fuse/bin/yt-dlp (master plan §6.5).
     var ytDlpURL: URL {
         URL(fileURLWithPath: NSHomeDirectory())
@@ -97,6 +105,52 @@ final class ToolManager {
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                 continuation.resume(returning: version.isEmpty ? nil : version)
             }
+        }
+    }
+
+    /// Latest stable release tag (e.g. "2026.06.09") from GitHub, or nil if
+    /// the network/API is unavailable. Best-effort — never throws.
+    func latestReleaseVersion() async -> String? {
+        var request = URLRequest(url: Self.ytDlpLatestReleaseAPI)
+        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        request.timeoutInterval = 15
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode),
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let tag = object["tag_name"] as? String else { return nil }
+        let trimmed = tag.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    /// Whether enough time has elapsed since the last check to run another.
+    /// Pure for testability (see ToolManagerTests).
+    static func shouldCheckForUpdate(now: Date, lastCheck: Date?,
+                                     minInterval: TimeInterval) -> Bool {
+        guard let lastCheck else { return true }
+        return now.timeIntervalSince(lastCheck) >= minInterval
+    }
+
+    /// Best-effort background refresh: if yt-dlp is ALREADY installed and a
+    /// newer stable build exists, download it. Deliberately never installs
+    /// from scratch — the first-use consent flow (Settings → Downloads) owns
+    /// that decision. Safe to call on every launch; the caller throttles via
+    /// `shouldCheckForUpdate`.
+    func autoUpdateIfNeeded() async {
+        guard ytDlpInstalled else { return }
+        guard let latest = await latestReleaseVersion() else {
+            Log.downloader.info("yt-dlp update check skipped (offline?)")
+            return
+        }
+        let current = await installedVersion()
+        guard latest != current else {
+            Log.downloader.info("yt-dlp up to date (\(latest, privacy: .public))")
+            return
+        }
+        do {
+            try await installOrUpdateYtDlp()
+            Log.downloader.info("yt-dlp auto-updated \(current ?? "?", privacy: .public) → \(latest, privacy: .public)")
+        } catch {
+            Log.downloader.warning("yt-dlp auto-update failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 }
