@@ -79,6 +79,13 @@ final class RecordingService {
     func startArmed() { handle(.startRequested) }
     func cancelArmed() { handle(.regionCancelled) }
 
+    /// Cut a clear opening in the dim overlay at the REC controls' frame
+    /// (GLOBAL Cocoa coords) so the Stop pill never sits under the dark
+    /// layer. The HUD belongs to CaptureController, hence the hand-off.
+    func revealControls(at globalRect: CGRect?) {
+        picker.cutControlsOpening(at: globalRect)
+    }
+
     private func handle(_ event: RecordingStateMachine.Event) {
         let (next, action) = RecordingStateMachine.transition(from: phase, on: event)
         phase = next

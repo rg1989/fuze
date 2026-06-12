@@ -34,6 +34,9 @@ final class CaptureController {
                 self.hud.showArmed(near: self.recorder.currentRegion)
             case .recording:
                 self.hud.show(near: self.recorder.currentRegion)
+                // The HUD sits in the dimmed area outside the selection;
+                // open a matching hole in the dim so it is never darkened.
+                self.recorder.revealControls(at: self.hud.controlsFrame)
             case .idle, .finishing:
                 self.hud.hide()
             case .selectingRegion:

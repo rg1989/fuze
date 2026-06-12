@@ -44,6 +44,9 @@ struct RecHUDView: View {
                 .buttonStyle(.hudRecordRed)
             }
         }
+        // Without fixedSize the hosting view lets the button labels compress
+        // and truncate ("Ca…") even when the panel matches the measured size.
+        .fixedSize()
         .frame(minHeight: 27)
         .padding(.horizontal, 18)
         .padding(.vertical, 11)
@@ -54,7 +57,9 @@ struct RecHUDView: View {
 
 /// Floating REC controls. Armed: Ready/Start/Cancel centered in the middle of
 /// the selection. Recording: red dot, elapsed timer, Stop button — kept just
-/// OUTSIDE the selection so the controls never appear in the captured video.
+/// OUTSIDE the selection, in an opening cut out of the dim backdrop; the
+/// panel is also excluded from screen capture (sharingType .none) so the
+/// controls never appear in the recorded video.
 final class RecHUD {
     private let model = RecHUDModel()
     private var panel: NSPanel?
@@ -77,8 +82,11 @@ final class RecHUD {
 
     /// Where to place the HUD panel (Cocoa coords). Armed: dead-center of the
     /// selection, clamped to the visible frame. Recording: just BELOW the
-    /// selection (outside the captured region — the HUD must not appear in the
-    /// video), falling back to above the top edge, then inside.
+    /// selection (outside the captured region), falling back to above the
+    /// top edge, then inside. The dim backdrop gets an opening cut at the
+    /// controls (see RegionPicker.cutControlsOpening) so they are never
+    /// dimmed, and the panel's sharingType is .none so they can never
+    /// appear in the captured video either way.
     /// nil region = full screen: bottom-center of the visible frame.
     static func hudOrigin(mode: RecHUDModel.Mode, region: CGRect?,
                           panelSize: CGSize, screenVisible: CGRect) -> CGPoint {
@@ -106,6 +114,14 @@ final class RecHUD {
     }
 
     private var region: CGRect?
+
+    /// Test hook: the live panel frame (nil before the first present).
+    var panelFrameForTesting: CGRect? { panel?.frame }
+
+    /// The visible pill capsule in GLOBAL Cocoa coords: the panel frame
+    /// minus the transparent 20pt shadow padding around the content.
+    /// Used to cut a matching opening in the region-picker dim backdrop.
+    var controlsFrame: CGRect? { panel?.frame.insetBy(dx: 20, dy: 20) }
 
     /// Pre-recording controls: region picked, waiting for Start/Cancel.
     func showArmed(near region: CGRect?) {
@@ -144,6 +160,10 @@ final class RecHUD {
             panel.isOpaque = false
             panel.backgroundColor = .clear
             panel.hasShadow = false
+            // Visible on screen but EXCLUDED from screen capture — the
+            // controls sit inside the recorded region without ever
+            // appearing in the video (same trick as the system capture UI).
+            panel.sharingType = .none
             panel.isReleasedWhenClosed = false
             panel.hidesOnDeactivate = false
             panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
@@ -154,8 +174,13 @@ final class RecHUD {
         }
         // Mode switches change the content size (armed has two buttons);
         // resize before computing the origin so centering uses real bounds.
-        if let panel, let hosting {
-            panel.setContentSize(hosting.fittingSize)
+        // The persistent hosting view applies @Published changes on the NEXT
+        // runloop turn, so its fittingSize here is the PREVIOUS mode's size
+        // (armed pill clipped into a recording-sized panel). A throwaway
+        // hosting view lays out the current mode synchronously.
+        if let panel {
+            let probe = NSHostingView(rootView: RecHUDView(model: model))
+            panel.setContentSize(probe.fittingSize)
         }
         let screen = region.flatMap { r in
             NSScreen.screens.first { $0.frame.intersects(r) }

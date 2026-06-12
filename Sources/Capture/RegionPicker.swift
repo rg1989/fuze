@@ -22,6 +22,11 @@ private final class RegionPickerView: NSView {
     /// reacting to input (the window also starts ignoring mouse events so
     /// the armed/recording HUD stays clickable underneath the cursor).
     private(set) var isFrozen = false
+    /// Capsule opening punched out of the dim for the REC controls (view
+    /// coords), so the Stop pill never sits under the dark layer.
+    var controlsOpening: CGRect? {
+        didSet { needsDisplay = true }
+    }
 
     func freeze() {
         isFrozen = true
@@ -66,6 +71,21 @@ private final class RegionPickerView: NSView {
             hint.draw(at: CGPoint(x: bounds.midX - size.width / 2,
                                   y: bounds.midY - size.height / 2),
                       withAttributes: attrs)
+        }
+        // Opening for the REC controls, punched out of the dim at exactly
+        // the pill's frame: the pill's behind-window blur then samples the
+        // undimmed desktop, so the glass reads as bright as the voice pill
+        // instead of looking buried under the dark layer. No inset — a
+        // larger hole shows a bright halo ring that reads as an artifact.
+        if let opening = controlsOpening {
+            let hole = opening
+            NSGraphicsContext.saveGraphicsState()
+            NSGraphicsContext.current?.compositingOperation = .copy
+            NSColor.clear.setFill()
+            NSBezierPath(roundedRect: hole,
+                         xRadius: hole.height / 2,
+                         yRadius: hole.height / 2).fill()
+            NSGraphicsContext.restoreGraphicsState()
         }
     }
 
@@ -142,8 +162,9 @@ final class RegionPicker {
         view.onResult = { [weak self] result in
             switch result {
             case .region:
-                // Keep the dim + clear hole on screen through the armed and
-                // recording phases; RecordingService dismisses on cancel/finish.
+                // Keep the dim + clear hole on screen through the armed
+                // phase (outline only once recording starts);
+                // RecordingService dismisses on cancel/finish.
                 self?.freezeInPlace()
             case .fullScreen, .cancelled:
                 self?.dismiss()
@@ -155,6 +176,18 @@ final class RegionPicker {
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
         window.makeFirstResponder(view)
+    }
+
+    /// Recording started: cut a clear opening in the dim backdrop at the
+    /// REC controls' frame (GLOBAL Cocoa coords) so the Stop pill is never
+    /// covered by the dark layer. Pass nil to close the opening.
+    func cutControlsOpening(at globalRect: CGRect?) {
+        guard let window,
+              let view = window.contentView as? RegionPickerView else { return }
+        // View coords = global coords shifted by the window origin (the
+        // window's frame equals the screen's frame).
+        view.controlsOpening = globalRect?.offsetBy(dx: -window.frame.minX,
+                                                    dy: -window.frame.minY)
     }
 
     /// Selection confirmed: stop interacting but stay visible. Mouse events

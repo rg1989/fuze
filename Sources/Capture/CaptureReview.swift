@@ -91,6 +91,25 @@ struct ScreenshotReviewView: View {
     }
 }
 
+/// AppKit AVPlayerView bridged into SwiftUI. SwiftUI's VideoPlayer
+/// (_AVKit_SwiftUI) aborts in generic-metadata instantiation on this OS,
+/// so the review window uses the AppKit player directly.
+private struct ReviewPlayerView: NSViewRepresentable {
+    let player: AVPlayer
+
+    func makeNSView(context: Context) -> AVPlayerView {
+        let view = AVPlayerView()
+        view.player = player
+        view.controlsStyle = .inline
+        view.showsFullScreenToggleButton = false
+        return view
+    }
+
+    func updateNSView(_ view: AVPlayerView, context: Context) {
+        view.player = player
+    }
+}
+
 /// Recording review = player + trim sliders with the action bar under it.
 struct VideoReviewView: View {
     @ObservedObject var state: VideoReviewState
@@ -98,7 +117,7 @@ struct VideoReviewView: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            VideoPlayer(player: state.player)
+            ReviewPlayerView(player: state.player)
                 .frame(minWidth: 560, minHeight: 320)
             HStack(spacing: 8) {
                 Text(timeLabel(state.start)).monospacedDigit()
