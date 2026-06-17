@@ -42,87 +42,24 @@ if [[ -n "${NOTARY_PROFILE:-}" && "$SIGN_ID" != "-" ]]; then
   rm "$OUT/Fuse.zip"
 fi
 
-# DMG — styled drag-to-Applications layout: dark background with an arrow,
-# 128 px icons, fixed window size. Finder layout is applied to a read-write
-# image first, then converted to the compressed final DMG.
+# DMG — styled drag-to-Applications layout via dmgbuild (no Finder Automation).
 DMG="$OUT/Fuse-$VERSION.dmg"
-STAGE="$OUT/dmg-root"
-RW_DMG="$OUT/Fuse-rw.dmg"
-mkdir -p "$STAGE/.background"
-cp -R "$APP" "$STAGE/"
-ln -s /Applications "$STAGE/Applications"
-swift scripts/dmg-background.swift "$STAGE/.background/background.png"
-# Keep installer metadata out of the drag-and-drop window.
-if command -v SetFile >/dev/null 2>&1; then
-  SetFile -a V "$STAGE/.background"
-else
-  chflags hidden "$STAGE/.background"
+BG="$OUT/dmg-background.png"
+swift scripts/dmg-background.swift "$BG"
+
+if ! python3 -c "import dmgbuild" 2>/dev/null; then
+  echo "Installing dmgbuild (one-time) for DMG layout…"
+  python3 -m pip install --user dmgbuild
 fi
 
-# Detach stale Fuse installer volumes from earlier opens/builds — a mounted
-# "Fuse" volume would make this image mount as "Fuse 2", so Finder would
-# style (and detach) the wrong disk.
 for vol in /Volumes/Fuse /Volumes/Fuse\ *; do
   [ -d "$vol" ] && hdiutil detach "$vol" -force >/dev/null 2>&1 || true
 done
 
-hdiutil create -volname "Fuse" -srcfolder "$STAGE" -ov -format UDRW "$RW_DMG"
-MOUNT=$(hdiutil attach "$RW_DMG" -readwrite -noverify -noautoopen | grep -o '/Volumes/.*' | tail -1)
-if [ "$MOUNT" != "/Volumes/Fuse" ]; then
-  echo "WARNING: unexpected mount point '$MOUNT'; skipping Finder styling"
-else
-# Hide metadata folders macOS may add when the image is mounted.
-hide_dmg_item() {
-  local path="$1"
-  [ -e "$path" ] || return 0
-  if command -v SetFile >/dev/null 2>&1; then
-    SetFile -a V "$path"
-  else
-    chflags hidden "$path"
-  fi
-}
-hide_dmg_item "$MOUNT/.background"
-hide_dmg_item "$MOUNT/.fseventsd"
-hide_dmg_item "$MOUNT/.DS_Store"
-
-# Finder scripting needs Automation permission; a denial must not kill the
-# release — the DMG just ships with the default layout.
-osascript <<'EOF' || echo "WARNING: Finder styling failed (Automation permission?); DMG keeps default layout"
-tell application "Finder"
-  tell disk "Fuse"
-    open
-    set current view of container window to icon view
-    set toolbar visible of container window to false
-    set statusbar visible of container window to false
-    -- window bounds {left, top, right, bottom}: 660×340 content
-    set the bounds of container window to {200, 120, 860, 460}
-    set viewOptions to the icon view options of container window
-    set arrangement of viewOptions to not arranged
-    set icon size of viewOptions to 128
-    set text size of viewOptions to 13
-    set background picture of viewOptions to file ".background:background.png"
-    -- positions are icon centers in window coords (top-left origin)
-    set position of item "Fuse.app" of container window to {165, 160}
-    set position of item "Applications" of container window to {495, 160}
-    -- Never show installer metadata, even when Finder displays hidden files.
-    repeat with hiddenName in {".background", ".fseventsd", ".DS_Store"}
-      try
-        set position of item hiddenName of container window to {-200, -200}
-        set visible of item hiddenName of container window to false
-      end try
-    end repeat
-    close
-    open
-    update without registering applications
-    delay 1
-    close
-  end tell
-end tell
-EOF
-fi
-sync
-hdiutil detach "$MOUNT"
-hdiutil convert "$RW_DMG" -format UDZO -ov -o "$DMG"
-rm -f "$RW_DMG"
-rm -rf "$STAGE"
+APP_ABS="$(cd "$OUT" && pwd)/Fuse.app"
+BG_ABS="$(cd "$(dirname "$BG")" && pwd)/$(basename "$BG")"
+python3 -m dmgbuild -s scripts/dmg-settings.py \
+  -Dapp="$APP_ABS" -Dbackground="$BG_ABS" \
+  "Fuse" "$DMG"
+rm -f "$BG"
 echo "Built $DMG"
