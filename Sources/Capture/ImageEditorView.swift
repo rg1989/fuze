@@ -246,13 +246,27 @@ struct ImageEditorPane: View {
         VStack(spacing: 0) {
             toolbar
             Divider()
-            ScrollView([.horizontal, .vertical]) {
-                canvasStack
-                    .frame(width: state.image.size.width,
-                           height: state.image.size.height)
-                    .padding(12)
+            GeometryReader { geo in
+                let imageSize = state.image.size
+                let padding: CGFloat = 12
+                let available = CGSize(
+                    width: max(1, geo.size.width - padding * 2),
+                    height: max(1, geo.size.height - padding * 2))
+                let scale = CaptureGeometry.fitScale(imageSize: imageSize,
+                                                     availableSize: available)
+                let displaySize = CGSize(width: imageSize.width * scale,
+                                         height: imageSize.height * scale)
+
+                ZStack {
+                    scaledCanvas(scale: scale, displaySize: displaySize)
+                }
+                .frame(width: geo.size.width, height: geo.size.height)
+                .clipped()
+                .padding(padding)
             }
+            .layoutPriority(1)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var toolbar: some View {
@@ -302,13 +316,13 @@ struct ImageEditorPane: View {
         .padding(10)
     }
 
-    private var canvasStack: some View {
+    private func scaledCanvas(scale: CGFloat, displaySize: CGSize) -> some View {
         ZStack(alignment: .topLeading) {
             Image(nsImage: state.image)
                 .resizable()
-                .frame(width: state.image.size.width,
-                       height: state.image.size.height)
+                .frame(width: displaySize.width, height: displaySize.height)
             Canvas { context, _ in
+                context.concatenate(CGAffineTransform(scaleX: scale, y: scale))
                 for a in state.annotations { draw(a, in: &context) }
                 if let a = state.inProgress { draw(a, in: &context) }
                 if state.cropMode, let crop = state.cropRect {
@@ -320,17 +334,20 @@ struct ImageEditorPane: View {
                                    style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
                 }
             }
-            .gesture(dragGesture)
+            .frame(width: displaySize.width, height: displaySize.height)
             if let anchor = state.pendingText {
                 TextField("Text", text: $state.textDraft)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 200)
                     .focused($textFieldFocused)
-                    .offset(x: anchor.x, y: anchor.y)
+                    .offset(x: anchor.x * scale, y: anchor.y * scale)
                     .onSubmit { state.commitText() }
                     .onAppear { textFieldFocused = true }
             }
         }
+        .frame(width: displaySize.width, height: displaySize.height)
+        .contentShape(Rectangle())
+        .gesture(dragGesture(scale: scale))
     }
 
     /// Canvas stroker — thin twin of ImageEditorState.drawWithAppKit.
@@ -352,13 +369,21 @@ struct ImageEditorPane: View {
             style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
     }
 
-    private var dragGesture: some Gesture {
+    private func dragGesture(scale: CGFloat) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
-                state.dragChanged(start: value.startLocation, current: value.location)
+                state.dragChanged(
+                    start: CaptureGeometry.imagePoint(fromViewPoint: value.startLocation,
+                                                      scale: scale),
+                    current: CaptureGeometry.imagePoint(fromViewPoint: value.location,
+                                                        scale: scale))
             }
             .onEnded { value in
-                state.dragEnded(start: value.startLocation, end: value.location)
+                state.dragEnded(
+                    start: CaptureGeometry.imagePoint(fromViewPoint: value.startLocation,
+                                                      scale: scale),
+                    end: CaptureGeometry.imagePoint(fromViewPoint: value.location,
+                                                    scale: scale))
             }
     }
 }

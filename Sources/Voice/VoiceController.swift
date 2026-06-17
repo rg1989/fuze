@@ -44,8 +44,10 @@ final class VoiceController: ObservableObject {
             "voice.language": "en",
             "voice.removeFillers": true,
             "voice.activationMode": "hold",
+            VoiceSounds.startKey: "Pop",
             VoiceSounds.stopKey: "Tink",
             VoiceSounds.finishKey: "Glass",
+            VoiceSounds.noSpeechKey: "Basso",
             ModifierHoldMonitor.defaultsKey: 0,
         ])
 
@@ -142,6 +144,7 @@ final class VoiceController: ObservableObject {
     private func beginRecording() {
         do {
             try recorder.start()
+            VoiceSounds.playStarted()
             hud.show(.recording)
         } catch {
             Log.voice.error("recorder failed to start: \(String(describing: error))")
@@ -151,13 +154,24 @@ final class VoiceController: ObservableObject {
         }
     }
 
+    private func rejectEmptyRecording(reason: String) {
+        VoiceSounds.playNoSpeech()
+        hud.flash(reason, hideAfter: 2.0)
+        execute(session.handle(.transcriptionFinished))
+    }
+
     private func finishRecordingAndTranscribe() {
         let samples = recorder.stop()
         // 16 kHz * 0.3 s = 4800 samples minimum.
         guard samples.count >= 4800 else {
             Log.voice.info("recording too short (\(samples.count) samples); discarding")
-            hud.flash("Too short")
+            hud.flash("Too short", hideAfter: 2.0)
             execute(session.handle(.transcriptionFailed))
+            return
+        }
+        if AudioSilence.isEffectivelySilent(samples) {
+            Log.voice.info("recording silent (\(samples.count) samples); skipping transcription")
+            rejectEmptyRecording(reason: "No speech detected")
             return
         }
         VoiceSounds.playStopped()   // valid take captured — stopped listening
@@ -211,8 +225,7 @@ final class VoiceController: ObservableObject {
     private func deliver(raw: String) {
         let removeFillers = UserDefaults.standard.bool(forKey: "voice.removeFillers")
         guard let cleaned = TranscriptPostProcessor.clean(raw, removeFillers: removeFillers) else {
-            hud.flash("No speech detected")
-            execute(session.handle(.transcriptionFinished))
+            rejectEmptyRecording(reason: "No speech detected")
             return
         }
         // Always keep the transcript on the clipboard so it's never lost, then

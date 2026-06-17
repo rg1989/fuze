@@ -211,6 +211,7 @@ final class YtDlpRunner {
     func startDownload(url: String,
                        preset: String,
                        destinationPath: String,
+                       writeMode: DownloadWriteMode = .noOverwrite,
                        onProgress: @escaping @MainActor (DownloadProgress) -> Void,
                        onStatus: @escaping @MainActor (String) -> Void,
                        completion: @escaping @MainActor (Result<String, Error>) -> Void) throws -> DownloadHandle {
@@ -222,6 +223,7 @@ final class YtDlpRunner {
             container: UserDefaults.standard.string(forKey: "downloader.container") ?? "mp4",
             preset: preset,
             ffmpegAvailable: ffmpegPath != nil)
+        arguments += writeMode.ytDlpArguments
         arguments += [
             "--no-playlist",
             "--continue",                     // resume a paused .part file in place
@@ -232,7 +234,7 @@ final class YtDlpRunner {
             "--print", "after_move:filepath", // final path, after any merge/move
             "--no-simulate",                  // --print alone implies simulation; cancel that
             "-P", destinationPath,
-            "-o", "%(title)s [%(id)s].%(ext)s",
+            "-o", "%(title)s.%(ext)s",
         ]
         if let ffmpegPath {
             arguments += ["--ffmpeg-location", (ffmpegPath as NSString).deletingLastPathComponent]

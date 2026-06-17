@@ -77,6 +77,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         voiceController.start()
         if downloaderController == nil { downloaderController = DownloaderController() }
         downloaderController.start()
+        clipboardController?.downloadURL = { [weak self] url in
+            guard UserDefaults.standard.bool(forKey: "downloads.enabled") else { return }
+            if self?.downloaderController == nil { self?.downloaderController = DownloaderController() }
+            _ = self?.downloaderController.queue.add(url: url)
+        }
         notificationsController = NotificationsController()
         notificationsController.start()
         clearNotificationsMenuItem.target = notificationsController

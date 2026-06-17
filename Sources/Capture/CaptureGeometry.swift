@@ -21,4 +21,20 @@ enum CaptureGeometry {
                width: rect.width,
                height: rect.height)
     }
+
+    /// Uniform scale that fits `imageSize` inside `availableSize` while
+    /// preserving aspect ratio. Grows above 1.0 when the viewport is larger
+    /// than the image so resizing the review window enlarges the canvas.
+    static func fitScale(imageSize: CGSize, availableSize: CGSize) -> CGFloat {
+        guard imageSize.width > 0, imageSize.height > 0,
+              availableSize.width > 0, availableSize.height > 0 else { return 1 }
+        return min(availableSize.width / imageSize.width,
+                   availableSize.height / imageSize.height)
+    }
+
+    /// Map a point from the on-screen (scaled) editor into image coordinates.
+    static func imagePoint(fromViewPoint point: CGPoint, scale: CGFloat) -> CGPoint {
+        guard scale > 0 else { return point }
+        return CGPoint(x: point.x / scale, y: point.y / scale)
+    }
 }

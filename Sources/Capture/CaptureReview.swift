@@ -87,7 +87,7 @@ struct ScreenshotReviewView: View {
             ReviewActionBar(onAction: onAction)
                 .padding(12)
         }
-        .frame(minWidth: 680, minHeight: 500)
+        .frame(minWidth: 680, maxWidth: .infinity, minHeight: 500, maxHeight: .infinity)
     }
 }
 
@@ -166,24 +166,7 @@ final class CaptureReviewWindowController {
     init?(fileURL: URL, kind: CaptureKind) {
         let relay = ReviewActionRelay()
         self.relay = relay
-        let hosting: NSView
-        switch kind {
-        case .screenshot:
-            guard let image = NSImage(contentsOf: fileURL) else { return nil }
-            let state = ImageEditorState(image: image, fileURL: fileURL)
-            imageState = state
-            videoState = nil
-            hosting = NSHostingView(rootView: ScreenshotReviewView(state: state) {
-                relay.onAction?($0)
-            })
-        case .recording:
-            let state = VideoReviewState(fileURL: fileURL)
-            imageState = nil
-            videoState = state
-            hosting = NSHostingView(rootView: VideoReviewView(state: state) {
-                relay.onAction?($0)
-            })
-        }
+        var screenshotImageSize: CGSize?
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 720, height: 540),
             styleMask: [.titled, .closable, .resizable, .miniaturizable],
@@ -192,7 +175,31 @@ final class CaptureReviewWindowController {
         window.title = fileURL.lastPathComponent
         window.level = .floating
         window.isReleasedWhenClosed = false
-        window.contentView = hosting
+
+        switch kind {
+        case .screenshot:
+            guard let image = NSImage(contentsOf: fileURL) else { return nil }
+            let state = ImageEditorState(image: image, fileURL: fileURL)
+            imageState = state
+            videoState = nil
+            screenshotImageSize = image.size
+            let hosting = NSHostingView(rootView: ScreenshotReviewView(state: state) {
+                relay.onAction?($0)
+            })
+            Self.embed(hosting, in: window)
+        case .recording:
+            let state = VideoReviewState(fileURL: fileURL)
+            imageState = nil
+            videoState = state
+            let hosting = NSHostingView(rootView: VideoReviewView(state: state) {
+                relay.onAction?($0)
+            })
+            Self.embed(hosting, in: window)
+        }
+
+        if let screenshotImageSize {
+            Self.sizeScreenshotWindow(window, imageSize: screenshotImageSize)
+        }
         window.center()
         self.window = window
         closeObserver = NotificationCenter.default.addObserver(
@@ -269,5 +276,44 @@ final class CaptureReviewWindowController {
 
     func close() {
         window.close()
+    }
+
+    /// Pin the SwiftUI root to the window content area. Without this,
+    /// NSHostingView can report the canvas's full pixel dimensions as its
+    /// intrinsic size and AppKit adds scroll bars around a tiny window.
+    private static func embed<Content: View>(_ hosting: NSHostingView<Content>, in window: NSWindow) {
+        let container = NSView(frame: .zero)
+        hosting.translatesAutoresizingMaskIntoConstraints = false
+        hosting.sizingOptions = []
+        container.addSubview(hosting)
+        window.contentView = container
+        NSLayoutConstraint.activate([
+            hosting.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            hosting.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            hosting.topAnchor.constraint(equalTo: container.topAnchor),
+            hosting.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+        ])
+    }
+
+    /// Open large enough to show the full capture at a comfortable size,
+    /// capped to the primary screen's visible frame.
+    private static func sizeScreenshotWindow(_ window: NSWindow, imageSize: CGSize) {
+        let screen = window.screen ?? NSScreen.main
+        let visible = screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1280, height: 800)
+        // Toolbar + dividers + action bar + editor padding (matches ImageEditorPane).
+        let chromeHeight: CGFloat = 52 + 1 + 56 + 24 + 24
+        let chromeWidth: CGFloat = 24
+        let maxContent = CGSize(
+            width: max(680, visible.width * 0.92),
+            height: max(500, visible.height * 0.88))
+        let canvasAvailable = CGSize(
+            width: max(1, maxContent.width - chromeWidth),
+            height: max(1, maxContent.height - chromeHeight))
+        let scale = CaptureGeometry.fitScale(imageSize: imageSize,
+                                             availableSize: canvasAvailable)
+        let contentW = min(maxContent.width, imageSize.width * scale + chromeWidth)
+        let contentH = min(maxContent.height, imageSize.height * scale + chromeHeight)
+        window.setContentSize(NSSize(width: contentW, height: contentH))
+        window.minSize = NSSize(width: 680, height: 500)
     }
 }

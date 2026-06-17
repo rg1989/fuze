@@ -52,6 +52,12 @@ mkdir -p "$STAGE/.background"
 cp -R "$APP" "$STAGE/"
 ln -s /Applications "$STAGE/Applications"
 swift scripts/dmg-background.swift "$STAGE/.background/background.png"
+# Keep installer metadata out of the drag-and-drop window.
+if command -v SetFile >/dev/null 2>&1; then
+  SetFile -a V "$STAGE/.background"
+else
+  chflags hidden "$STAGE/.background"
+fi
 
 # Detach stale Fuse installer volumes from earlier opens/builds — a mounted
 # "Fuse" volume would make this image mount as "Fuse 2", so Finder would
@@ -65,6 +71,20 @@ MOUNT=$(hdiutil attach "$RW_DMG" -readwrite -noverify -noautoopen | grep -o '/Vo
 if [ "$MOUNT" != "/Volumes/Fuse" ]; then
   echo "WARNING: unexpected mount point '$MOUNT'; skipping Finder styling"
 else
+# Hide metadata folders macOS may add when the image is mounted.
+hide_dmg_item() {
+  local path="$1"
+  [ -e "$path" ] || return 0
+  if command -v SetFile >/dev/null 2>&1; then
+    SetFile -a V "$path"
+  else
+    chflags hidden "$path"
+  fi
+}
+hide_dmg_item "$MOUNT/.background"
+hide_dmg_item "$MOUNT/.fseventsd"
+hide_dmg_item "$MOUNT/.DS_Store"
+
 # Finder scripting needs Automation permission; a denial must not kill the
 # release — the DMG just ships with the default layout.
 osascript <<'EOF' || echo "WARNING: Finder styling failed (Automation permission?); DMG keeps default layout"
@@ -84,6 +104,13 @@ tell application "Finder"
     -- positions are icon centers in window coords (top-left origin)
     set position of item "Fuse.app" of container window to {165, 160}
     set position of item "Applications" of container window to {495, 160}
+    -- Never show installer metadata, even when Finder displays hidden files.
+    repeat with hiddenName in {".background", ".fseventsd", ".DS_Store"}
+      try
+        set position of item hiddenName of container window to {-200, -200}
+        set visible of item hiddenName of container window to false
+      end try
+    end repeat
     close
     open
     update without registering applications

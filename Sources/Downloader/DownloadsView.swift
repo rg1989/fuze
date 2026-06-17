@@ -39,7 +39,6 @@ struct DownloadsView: View {
                     }
                 }
                 Button("Download", action: submit)
-                    .keyboardShortcut(.defaultAction)
                     .disabled(urlText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
             .padding(12)

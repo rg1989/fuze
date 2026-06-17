@@ -13,6 +13,7 @@ final class PastePickerViewModel: ObservableObject {
 
     private let store: ClipboardStore
     var onPaste: (ClipboardItem) -> Void = { _ in }   // set by ClipboardController
+    var onDownloadURL: (String) -> Void = { _ in }     // set by AppDelegate
     var onClose: () -> Void = {}                      // set by ClipboardController
 
     init(store: ClipboardStore) { self.store = store }
@@ -51,10 +52,15 @@ final class PastePickerViewModel: ObservableObject {
         default:
             break
         }
-        if event.modifierFlags.contains(.command),   // ⌘1–⌘9 pastes the nth item
-           let digit = Int(event.charactersIgnoringModifiers ?? ""), (1...9).contains(digit) {
-            pasteItem(at: digit - 1)
-            return true
+        if event.modifierFlags.contains(.command) {
+            if event.keyCode == 2 {   // ⌘D — download the selected link
+                downloadSelected()
+                return true
+            }
+            if let digit = Int(event.charactersIgnoringModifiers ?? ""), (1...9).contains(digit) {
+                pasteItem(at: digit - 1)
+                return true
+            }
         }
         return false   // typed characters go to the search field
     }
@@ -76,6 +82,13 @@ final class PastePickerViewModel: ObservableObject {
         guard items.indices.contains(selectedIndex), let id = items[selectedIndex].id else { return }
         do { try store.delete(id: id); reload() }
         catch { Log.clipboard.error("delete failed: \(error.localizedDescription)") }
+    }
+
+    func downloadSelected() {
+        guard items.indices.contains(selectedIndex) else { return }
+        let item = items[selectedIndex]
+        guard item.kind == "link" else { return }
+        onDownloadURL(item.preview)
     }
 
     /// The stored file URL of a "file"-kind item, for thumbnail generation.
@@ -128,7 +141,7 @@ struct PastePickerView: View {
                 }
             }
             Divider()
-            Text("↩ paste · ⌘↩ pin · ⌫ delete · esc close")
+            Text("↩ paste · ⌘↩ pin · ⌘D download link · ⌫ delete · esc close")
                 .font(.caption).foregroundStyle(.secondary).padding(6)
         }
         .frame(width: 460, height: 520)

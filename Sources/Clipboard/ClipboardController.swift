@@ -26,6 +26,7 @@ final class ClipboardController {
         panel.contentView = NSHostingView(rootView: PastePickerView(model: model))
 
         model.onPaste = { [weak self] item in self?.paste(item) }
+        model.onDownloadURL = { [weak self] url in self?.download(url) }
         model.onClose = { [weak self] in self?.hidePicker() }
         panel.onResignKey = { [weak self] in self?.hidePicker() }
 
@@ -34,6 +35,10 @@ final class ClipboardController {
             self?.togglePicker()
         }
     }
+
+    /// Enqueues a link for download via the shared downloader queue.
+    /// Wired from AppDelegate after DownloaderController is created.
+    var downloadURL: (String) -> Void = { _ in }
 
     func start() { watcher.start() }
 
@@ -87,5 +92,9 @@ final class ClipboardController {
                 Log.clipboard.error("paste failed: \(error.localizedDescription)")
             }
         }
+    }
+
+    private func download(_ url: String) {
+        downloadURL(url)
     }
 }

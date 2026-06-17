@@ -7,8 +7,10 @@ struct VoiceSettingsView: View {
     @AppStorage("voice.language") private var language = "en"
     @AppStorage("voice.removeFillers") private var removeFillers = true
     @AppStorage("voice.activationMode") private var activationMode = "hold"
+    @AppStorage(VoiceSounds.startKey) private var startSound = "Pop"
     @AppStorage(VoiceSounds.stopKey) private var stopSound = "Tink"
     @AppStorage(VoiceSounds.finishKey) private var finishSound = "Glass"
+    @AppStorage(VoiceSounds.noSpeechKey) private var noSpeechSound = "Basso"
     @AppStorage(ModifierHoldMonitor.defaultsKey) private var modifierMask = 0
     @ObservedObject private var controller = VoiceController.shared
     @State private var micStatus = PermissionsService.microphoneStatus
@@ -82,9 +84,11 @@ struct VoiceSettingsView: View {
             }
 
             Section("Sounds") {
+                soundPicker("When recording starts", selection: $startSound)
                 soundPicker("When recording stops", selection: $stopSound)
                 soundPicker("When transcript is ready", selection: $finishSound)
-                Text("Plays a sound as dictation stops listening and when the transcript is ready. The transcript is always copied to your clipboard too, so it's never lost even if it can't be pasted.")
+                soundPicker("When no speech is detected", selection: $noSpeechSound)
+                Text("Optional chimes for each stage of dictation. Set any picker to None to stay silent. The transcript is always copied to your clipboard too, so it's never lost even if it can't be pasted.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

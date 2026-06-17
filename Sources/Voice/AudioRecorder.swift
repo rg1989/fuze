@@ -58,3 +58,36 @@ final class AudioRecorder {
         return samplesQueue.sync { samples }
     }
 }
+
+/// Fast pre-check before handing audio to Whisper. Only rejects takes where
+/// the loudest moment is still near the noise floor — real speech always
+/// clears these bars on a Mac mic.
+enum AudioSilence {
+    /// 100 ms windows at 16 kHz.
+    static let windowSize = 1600
+    /// Peak sample amplitude across the whole take.
+    static let peakThreshold: Float = 0.025
+    /// Loudest window RMS — speech bursts far exceed this.
+    static let maxWindowRMSThreshold: Float = 0.012
+
+    static func isEffectivelySilent(_ samples: [Float]) -> Bool {
+        guard !samples.isEmpty else { return true }
+
+        var peak: Float = 0
+        var maxWindowRMS: Float = 0
+        var index = 0
+        while index < samples.count {
+            let count = min(windowSize, samples.count - index)
+            var sumSquares: Float = 0
+            for i in index..<(index + count) {
+                let sample = samples[i]
+                peak = max(peak, abs(sample))
+                sumSquares += sample * sample
+            }
+            maxWindowRMS = max(maxWindowRMS, sqrt(sumSquares / Float(count)))
+            index += windowSize
+        }
+
+        return peak < peakThreshold && maxWindowRMS < maxWindowRMSThreshold
+    }
+}

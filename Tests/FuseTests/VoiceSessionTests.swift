@@ -55,3 +55,41 @@ final class VoiceSessionTests: XCTestCase {
         XCTAssertEqual(session.state, .idle)
     }
 }
+
+final class AudioSilenceTests: XCTestCase {
+    func testEmptySamplesAreSilent() {
+        XCTAssertTrue(AudioSilence.isEffectivelySilent([]))
+    }
+
+    func testAllZerosAreSilent() {
+        XCTAssertTrue(AudioSilence.isEffectivelySilent([Float](repeating: 0, count: 16_000)))
+    }
+
+    func testTinyNoiseFloorIsSilent() {
+        XCTAssertTrue(AudioSilence.isEffectivelySilent([Float](repeating: 0.003, count: 16_000)))
+    }
+
+    func testSteadyRoomHissBelowSpeechFloorIsSilent() {
+        XCTAssertTrue(AudioSilence.isEffectivelySilent([Float](repeating: 0.008, count: 32_000)))
+    }
+
+    func testSpeechLikeSignalIsNotSilent() {
+        let speech = (0..<32_000).map { Float(sin(Double($0) / 8.0)) * 0.3 }
+        XCTAssertFalse(AudioSilence.isEffectivelySilent(speech))
+    }
+
+    func testQuietSpeechIsNotSilent() {
+        let speech = (0..<32_000).map { Float(sin(Double($0) / 8.0)) * 0.06 }
+        XCTAssertFalse(AudioSilence.isEffectivelySilent(speech))
+    }
+
+    func testBurstySpeechLikeWindowsAreNotSilent() {
+        var samples = [Float](repeating: 0.002, count: 32_000)
+        for window in stride(from: 0, to: 32_000, by: AudioSilence.windowSize * 2) {
+            for i in window..<min(window + AudioSilence.windowSize, 32_000) {
+                samples[i] = Float(sin(Double(i) / 6.0)) * 0.25
+            }
+        }
+        XCTAssertFalse(AudioSilence.isEffectivelySilent(samples))
+    }
+}

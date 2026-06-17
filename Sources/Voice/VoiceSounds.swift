@@ -4,8 +4,10 @@ import AppKit
 /// settings. Each event maps to a UserDefaults key holding a macOS system sound
 /// name (see `NSSound(named:)`); "" or "None" stays silent.
 enum VoiceSounds {
+    static let startKey = "voice.startSound"
     static let stopKey = "voice.stopSound"
     static let finishKey = "voice.finishSound"
+    static let noSpeechKey = "voice.noSpeechSound"
 
     /// System sounds shipped with macOS (/System/Library/Sounds), offered in
     /// the settings pickers.
@@ -14,11 +16,17 @@ enum VoiceSounds {
         "Morse", "Ping", "Pop", "Purr", "Sosumi", "Submarine", "Tink",
     ]
 
+    /// Played when recording starts (Fuse is listening).
+    static func playStarted() { play(UserDefaults.standard.string(forKey: startKey)) }
+
     /// Played when recording stops (Fuse stopped listening).
     static func playStopped() { play(UserDefaults.standard.string(forKey: stopKey)) }
 
     /// Played when the transcript is ready.
     static func playFinished() { play(UserDefaults.standard.string(forKey: finishKey)) }
+
+    /// Played when no speech was detected (empty take or blank Whisper output).
+    static func playNoSpeech() { play(UserDefaults.standard.string(forKey: noSpeechKey)) }
 
     /// Settings preview: play a named sound immediately.
     static func preview(_ name: String) { play(name) }

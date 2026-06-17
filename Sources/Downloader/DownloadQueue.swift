@@ -62,8 +62,14 @@ final class DownloadQueue: ObservableObject {
         return result
     }
 
+    /// Returns true when the same URL is already queued or in progress.
+    nonisolated static func isURLActive(_ url: String, in items: [DownloadItem]) -> Bool {
+        let active: Set<DownloadState> = [.queued, .fetchingMetadata, .downloading, .paused]
+        return items.contains { active.contains($0.state) && $0.url == url }
+    }
+
     /// Validates and enqueues a URL, then pumps the queue.
-    /// Returns false (and enqueues nothing) when the string is not an http(s) URL.
+    /// Returns false when the string is not an http(s) URL or the URL is already active.
     @discardableResult
     func add(url rawURL: String) -> Bool {
         let trimmed = rawURL.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -72,6 +78,10 @@ final class DownloadQueue: ObservableObject {
               scheme == "http" || scheme == "https",
               parsed.host != nil else {
             Log.downloader.info("rejected non-http(s) input")
+            return false
+        }
+        guard !Self.isURLActive(trimmed, in: items) else {
+            Log.downloader.info("skipped duplicate URL already in queue")
             return false
         }
         items.append(DownloadItem(id: UUID(), url: trimmed, state: .queued,
@@ -187,17 +197,47 @@ final class DownloadQueue: ObservableObject {
                 let metadata = try await self.runner.fetchMetadata(url: url) { [weak self] step in
                     self?.updateStatus(id: id, step: step)
                 }
-                self.beginDownload(id: id, metadata: metadata)
+                await self.confirmAndDownload(id: id, metadata: metadata)
             } catch {
                 self.markFailed(id: id, error: error)
             }
         }
     }
 
-    private func beginDownload(id: UUID, metadata: VideoMetadata) {
+    /// After metadata is known, ask about existing files on disk, then start yt-dlp.
+    private func confirmAndDownload(id: UUID, metadata: VideoMetadata) {
+        guard let index = items.firstIndex(where: { $0.id == id }),
+              items[index].state == .fetchingMetadata else { return }
+
+        let writeMode: DownloadWriteMode
+        if let existing = DownloadIndex.existingFilename(forVideoId: metadata.id,
+                                                         in: destinationPath) {
+            switch DownloadConflictPrompt.ask(videoTitle: metadata.title,
+                                              existingFilename: existing) {
+            case .cancel:
+                items[index].state = .cancelled
+                pump()
+                return
+            case .replace:
+                writeMode = .replace
+            case .saveCopy:
+                writeMode = .autoRename
+            }
+        } else {
+            writeMode = .noOverwrite
+        }
+        beginDownload(id: id, metadata: metadata, writeMode: writeMode)
+    }
+
+    private func beginDownload(id: UUID, metadata: VideoMetadata,
+                               writeMode: DownloadWriteMode = .noOverwrite) {
         guard let index = items.firstIndex(where: { $0.id == id }),
               items[index].state == .fetchingMetadata
                 || items[index].state == .queued else { return } // cancelled/removed meanwhile
+        guard handles[id] == nil else {
+            Log.downloader.warning("download already running for item \(id.uuidString)")
+            return
+        }
         items[index].metadata = metadata
         items[index].state = .downloading
         do {
@@ -205,6 +245,7 @@ final class DownloadQueue: ObservableObject {
                 url: items[index].url,
                 preset: qualityPreset,
                 destinationPath: destinationPath,
+                writeMode: writeMode,
                 onProgress: { [weak self] progress in
                     self?.updateProgress(id: id, progress: progress)
                 },
@@ -253,6 +294,9 @@ final class DownloadQueue: ObservableObject {
             items[index].state = .finished
             items[index].resultPath = path
             items[index].progress = DownloadProgress(percent: 100, speed: "", eta: "")
+            if let videoId = items[index].metadata?.id {
+                DownloadIndex.record(videoId: videoId, path: path)
+            }
             Log.downloader.info("finished: \(path, privacy: .public)")
         case .failure(let error):
             if let runnerError = error as? YtDlpRunner.RunnerError, case .cancelled = runnerError {

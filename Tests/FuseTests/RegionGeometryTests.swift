@@ -40,6 +40,33 @@ final class RegionGeometryTests: XCTestCase {
         XCTAssertEqual(flipped, CGRect(x: 50, y: 700, width: 300, height: 100))
     }
 
+    func testFitScaleShrinksOversizedImage() {
+        let scale = CaptureGeometry.fitScale(
+            imageSize: CGSize(width: 4000, height: 3000),
+            availableSize: CGSize(width: 800, height: 600))
+        XCTAssertEqual(scale, 0.2, accuracy: 0.0001)
+    }
+
+    func testFitScaleGrowsWhenViewportIsLarger() {
+        let scale = CaptureGeometry.fitScale(
+            imageSize: CGSize(width: 800, height: 600),
+            availableSize: CGSize(width: 1600, height: 1200))
+        XCTAssertEqual(scale, 2, accuracy: 0.0001)
+    }
+
+    func testFitScalePreservesAspectRatio() {
+        let scale = CaptureGeometry.fitScale(
+            imageSize: CGSize(width: 1600, height: 900),
+            availableSize: CGSize(width: 800, height: 800))
+        XCTAssertEqual(scale, 0.5, accuracy: 0.0001)
+    }
+
+    func testImagePointMapsViewCoordinatesToImageSpace() {
+        let point = CaptureGeometry.imagePoint(fromViewPoint: CGPoint(x: 150, y: 75),
+                                               scale: 0.5)
+        XCTAssertEqual(point, CGPoint(x: 300, y: 150))
+    }
+
     func testTopLeftRectFullScreenIsIdentityOrigin() {
         let cocoa = CGRect(x: 0, y: 0, width: 1728, height: 1117)
         let flipped = CaptureGeometry.topLeftRect(fromCocoaRect: cocoa, primaryScreenHeight: 1117)
