@@ -31,16 +31,20 @@ final class ClipboardController {
         panel.onResignKey = { [weak self] in self?.hidePicker() }
 
         // The ONLY hotkey this feature uses — never define new Name constants.
-        KeyboardShortcuts.onKeyDown(for: .pastePicker) { [weak self] in
-            self?.togglePicker()
-        }
+        // GlobalHotkeyTap delivers the shortcut; registered in start().
     }
 
     /// Enqueues a link for download via the shared downloader queue.
     /// Wired from AppDelegate after DownloaderController is created.
     var downloadURL: (String) -> Void = { _ in }
 
-    func start() { watcher.start() }
+    func start() {
+        watcher.start()
+        GlobalHotkeyTap.shared.register(.init(
+            name: .pastePicker,
+            isEnabled: { UserDefaults.standard.bool(forKey: "clipboard.enabled") },
+            onKeyDown: { [weak self] in self?.togglePicker() }))
+    }
 
     func togglePicker() {
         if panel.isVisible { hidePicker() } else { showPicker() }

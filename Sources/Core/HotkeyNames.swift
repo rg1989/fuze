@@ -1,3 +1,4 @@
+import Foundation
 import KeyboardShortcuts
 
 extension KeyboardShortcuts.Name {
@@ -10,8 +11,8 @@ extension KeyboardShortcuts.Name {
     // Notifications (Phase 7)
     static let clearNotifications = Self("clearNotifications", default: .init(.delete, modifiers: [.control, .option]))
 
-    // Downloader (Phase 6) — open the Downloads window from anywhere
-    static let openDownloads = Self("openDownloads", default: .init(.d, modifiers: [.control, .option]))
+    // Downloader (Phase 6) — open the downloads picker from anywhere
+    static let openDownloads = Self("openDownloads", default: .init(.d, modifiers: [.command, .shift]))
 
     // Notes (Phase 8)
     static let toggleNotesPanel = Self("toggleNotesPanel", default: .init(.m, modifiers: [.control, .option]))
@@ -35,4 +36,27 @@ extension KeyboardShortcuts.Name {
     // No defaults: folder-openers are menu items first, shortcuts opt-in.
     static let openScreenshotsFolder = Self("openScreenshotsFolder")
     static let openRecordingsFolder = Self("openRecordingsFolder")
+
+    /// One-time fixups for shortcuts whose default changed AFTER an earlier
+    /// release already persisted the old default. KeyboardShortcuts only writes
+    /// a default when none is stored, so a changed default is otherwise ignored
+    /// forever — even across reinstalls. Each fixup resets the stored value ONLY
+    /// when it still equals the superseded default (never clobbers a user's own
+    /// choice), then records a flag so it runs once.
+    @MainActor
+    static func migrateChangedDefaults() {
+        let defaults = UserDefaults.standard
+
+        // openDownloads: ⌃⌥D (original) → ⇧⌘D (current).
+        let flag = "core.shortcutMigration.openDownloadsCmdShiftD"
+        if !defaults.bool(forKey: flag) {
+            let supersededDefault = KeyboardShortcuts.Shortcut(.d, modifiers: [.control, .option])
+            let newDefault = KeyboardShortcuts.Shortcut(.d, modifiers: [.command, .shift])
+            let current = Self.openDownloads.shortcut
+            if current == nil || current == supersededDefault {
+                Self.openDownloads.shortcut = newDefault
+            }
+            defaults.set(true, forKey: flag)
+        }
+    }
 }

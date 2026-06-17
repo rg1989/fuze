@@ -42,6 +42,7 @@ All hotkeys are remappable in Settings.
 |---|---|
 | Push-to-talk dictation (hold) | <kbd>⌃</kbd><kbd>⌥</kbd><kbd>Space</kbd> |
 | Paste picker | <kbd>⌘</kbd><kbd>⇧</kbd><kbd>V</kbd> |
+| Downloads picker | <kbd>⌘</kbd><kbd>⇧</kbd><kbd>D</kbd> |
 | Screenshot region | <kbd>⌃</kbd><kbd>⌥</kbd><kbd>S</kbd> |
 | Start / stop recording | <kbd>⌃</kbd><kbd>⌥</kbd><kbd>R</kbd> |
 | Tile halves | <kbd>⌃</kbd><kbd>⌥</kbd> + <kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> |

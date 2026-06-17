@@ -63,7 +63,7 @@ struct DownloadsView: View {
                     .foregroundStyle(.secondary)
                 Spacer()
             } else {
-                List(queue.items) { item in
+                List(queue.displayItems) { item in
                     DownloadRowView(item: item, queue: queue)
                 }
                 .listStyle(.inset)

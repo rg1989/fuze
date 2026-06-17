@@ -152,6 +152,26 @@ final class DownloadQueue: ObservableObject {
     var hasFinished: Bool { items.contains { $0.state == .finished } }
     var hasFailed: Bool { items.contains { $0.state == .failed || $0.state == .cancelled } }
 
+    /// Active jobs first, then finished/failed/cancelled — each group most-recent first.
+    var displayItems: [DownloadItem] { Self.sortForDisplay(items) }
+
+    nonisolated static func sortForDisplay(_ items: [DownloadItem]) -> [DownloadItem] {
+        let active: Set<DownloadState> = [.queued, .fetchingMetadata, .downloading, .paused]
+        var activeItems: [(Int, DownloadItem)] = []
+        var inactiveItems: [(Int, DownloadItem)] = []
+        for (index, item) in items.enumerated() {
+            if active.contains(item.state) {
+                activeItems.append((index, item))
+            } else {
+                inactiveItems.append((index, item))
+            }
+        }
+        let byRecent: ([(Int, DownloadItem)]) -> [DownloadItem] = {
+            $0.sorted { $0.0 > $1.0 }.map(\.1)
+        }
+        return byRecent(activeItems) + byRecent(inactiveItems)
+    }
+
     func retry(id: UUID) {
         guard let index = items.firstIndex(where: { $0.id == id }),
               items[index].state == .failed || items[index].state == .cancelled else { return }

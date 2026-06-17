@@ -31,4 +31,14 @@ final class DownloadQueueTests: XCTestCase {
         let items = [item(.finished), item(.failed), item(.cancelled), item(.queued)]
         XCTAssertEqual(DownloadQueue.nextStartable(items: items, maxConcurrent: 1), [3])
     }
+
+    func testSortForDisplayActiveBeforeInactiveMostRecentFirst() {
+        let a = item(.finished)
+        let b = item(.downloading)
+        let c = item(.queued)
+        let d = item(.finished)
+        let items = [a, b, c, d]
+        let sorted = DownloadQueue.sortForDisplay(items)
+        XCTAssertEqual(sorted.map(\.id), [c.id, b.id, d.id, a.id])
+    }
 }

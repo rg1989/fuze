@@ -5,7 +5,7 @@ import KeyboardShortcuts
 final class HotkeyNamesTests: XCTestCase {
     func testAllNamesHaveDefaultShortcuts() {
         let all: [KeyboardShortcuts.Name] = [
-            .pushToTalk, .pastePicker, .clearNotifications,
+            .pushToTalk, .pastePicker, .openDownloads, .clearNotifications,
             .tileLeftHalf, .tileRightHalf, .tileTopHalf, .tileBottomHalf,
             .tileTopLeft, .tileTopRight, .tileBottomLeft, .tileBottomRight,
             .tileMaximize, .tileCenter, .tileNextDisplay,

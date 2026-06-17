@@ -1,4 +1,5 @@
 import AppKit
+import KeyboardShortcuts
 import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
@@ -24,6 +25,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // Hosted unit tests launch this app; never start OS hooks inside a test run.
         guard NSClassFromString("XCTestCase") == nil else { return }
 
+        // Must run before installMainMenu() (which renders the stored shortcut)
+        // and before any controller registers its hotkeys.
+        KeyboardShortcuts.Name.migrateChangedDefaults()
+
         installMainMenu()
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         statusItem.button?.image = NSImage(
@@ -45,9 +50,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(settingsItem)
         if downloaderController == nil { downloaderController = DownloaderController() }
         downloadsMenuItem = menuItem("Downloads…", icon: "arrow.down.circle",
-                                     action: #selector(DownloaderController.openDownloadsWindow),
-                                     key: "d")
+                                     action: #selector(DownloaderController.togglePickerFromMenu))
         downloadsMenuItem.target = downloaderController
+        downloadsMenuItem.setShortcut(for: .openDownloads)
         menu.addItem(downloadsMenuItem)
         clearNotificationsMenuItem = menuItem("Clear Notifications", icon: "bell.badge",
                                               action: #selector(NotificationsController.clearNow))
@@ -93,6 +98,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         captureController.start()
         screenshotsFolderMenuItem.target = captureController
         recordingsFolderMenuItem.target = captureController
+        GlobalHotkeyTap.shared.start()
         // FUSE:CONTROLLER-START
 
         // One-time coexistence check: if a known overlapping utility is running
@@ -125,10 +131,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let fileItem = NSMenuItem()
         let fileMenu = NSMenu(title: "File")
         let downloadsItem = NSMenuItem(title: "Downloads…",
-                                       action: #selector(DownloaderController.openDownloadsWindow),
-                                       keyEquivalent: "d")
+                                       action: #selector(DownloaderController.togglePickerFromMenu),
+                                       keyEquivalent: "")
         if downloaderController == nil { downloaderController = DownloaderController() }
         downloadsItem.target = downloaderController
+        downloadsItem.setShortcut(for: .openDownloads)
         fileMenu.addItem(downloadsItem)
         fileMenu.addItem(NSMenuItem(title: "Close Window",
                                     action: #selector(NSWindow.performClose(_:)),

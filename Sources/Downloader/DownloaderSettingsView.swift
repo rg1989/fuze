@@ -15,8 +15,8 @@ struct DownloaderSettingsView: View {
     var body: some View {
         Form {
             Section("Shortcut") {
-                KeyboardShortcuts.Recorder("Open Downloads window", name: .openDownloads)
-                Text("Opens the Downloads window from anywhere, even when Fuse isn't focused.")
+                KeyboardShortcuts.Recorder("Open Downloads picker", name: .openDownloads)
+                Text("Opens the downloads picker from anywhere. With Accessibility enabled (General tab), Fuse takes priority over other apps using the same shortcut.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
