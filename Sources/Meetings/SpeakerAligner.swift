@@ -52,14 +52,14 @@ enum SpeakerAligner {
     }
 
     /// Group tokens → words (a leading-space token starts a new word), attribute
-    /// each word to a speaker, and coalesce consecutive same-speaker words into
-    /// lines. A new line is started on a speaker change OR a silence gap longer
-    /// than `pauseGap` (so each pause-separated utterance is its own timestamped
-    /// message). Words with no covering diarizer segment default to Speaker 1, so
-    /// text still shows live and for solo speakers before diarization catches up.
-    // ponytail: 1.5 s pause = new message. Tune if it splits mid-sentence / merges turns.
+    /// each word to a speaker, and coalesce consecutive words into messages. A new
+    /// message starts on a speaker change OR an utterance boundary (a real silence
+    /// pause detected from the audio, in `boundaries`) — so each pause-separated
+    /// utterance is its own timestamped bubble. Words with no covering diarizer
+    /// segment default to Speaker 1, so text shows live and for solo speakers
+    /// before diarization catches up.
     static func lines(tokens: [AlignToken], segments: [AlignSpeakerSegment],
-                      pauseGap: Double = 1.5,
+                      boundaries: [Double] = [],
                       idFactory: () -> UUID = { UUID() }) -> [SpeakerLine] {
         struct Word { var text: String; var start: Double; var end: Double }
         var words: [Word] = []
@@ -73,16 +73,24 @@ enum SpeakerAligner {
                 words[words.count - 1].end = tk.end
             }
         }
+        let bounds = boundaries.sorted()
+        // Utterance index = how many pause boundaries precede this word's start.
+        func utterance(at start: Double) -> Int {
+            var n = 0
+            for b in bounds { if b <= start { n += 1 } else { break } }
+            return n
+        }
         var lines: [SpeakerLine] = []
+        var lastUtterance = -1
         for w in words where !w.text.isEmpty {
-            // No covering segment yet → default to Speaker 1 (index 0), tentative.
             let attribution = speakerIndex(forWordStart: w.start, end: w.end, segments: segments)
             let idx = attribution?.index ?? 0
             let isFinal = attribution?.isFinal ?? false
-            // Extend the current line only for the same speaker with no long pause;
-            // otherwise start a new (timestamped) message. Recomputed each tick, so
-            // merge regardless of finality; the line is solid only when all words are.
-            if var last = lines.last, last.speakerIndex == idx, w.start - last.end <= pauseGap {
+            let utt = utterance(at: w.start)
+            // Extend the current message only for the same speaker AND same
+            // utterance; otherwise start a new one. Recomputed each tick, so merge
+            // regardless of finality; a message is solid only when all words are.
+            if var last = lines.last, last.speakerIndex == idx, utt == lastUtterance {
                 last.text += " " + w.text
                 last.end = w.end
                 last.isFinal = last.isFinal && isFinal
@@ -90,6 +98,7 @@ enum SpeakerAligner {
             } else {
                 lines.append(SpeakerLine(id: idFactory(), speakerIndex: idx,
                                          text: w.text, start: w.start, end: w.end, isFinal: isFinal))
+                lastUtterance = utt
             }
         }
         return lines

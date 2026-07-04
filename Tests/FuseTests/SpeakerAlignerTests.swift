@@ -66,20 +66,23 @@ final class SpeakerAlignerTests: XCTestCase {
         XCTAssertEqual(lines[0].isFinal, false)
     }
 
-    func testLongPauseStartsNewMessage() {
-        // Same speaker, but a >1.5s silence gap splits into two timestamped messages.
+    func testAudioBoundaryStartsNewMessageForSameSpeaker() {
+        // Same speaker; an audio-silence boundary at 2.5s splits into two messages.
         let tokens = [tok("first", 0, 0.5), tok(" part", 0.5, 1.0),
-                      tok(" second", 3.0, 3.5)]           // 2.0s gap after "part"
-        let lines = SpeakerAligner.lines(tokens: tokens, segments: [seg(0, 0, 5)], idFactory: counter())
+                      tok(" second", 3.0, 3.5)]
+        let lines = SpeakerAligner.lines(tokens: tokens, segments: [seg(0, 0, 5)],
+                                         boundaries: [2.5], idFactory: counter())
         XCTAssertEqual(lines.count, 2)
         XCTAssertEqual(lines[0].text, "first part")
         XCTAssertEqual(lines[1].text, "second")
         XCTAssertEqual(lines[1].start, 3.0)              // new message carries its own start time
     }
 
-    func testShortGapKeepsSameMessage() {
-        let tokens = [tok("a", 0, 0.3), tok(" b", 0.6, 0.9)]   // 0.3s gap < 1.5s
-        let lines = SpeakerAligner.lines(tokens: tokens, segments: [seg(0, 0, 2)], idFactory: counter())
+    func testNoBoundaryKeepsSameMessage() {
+        // Same speaker, no audio boundary → one message even across a token gap.
+        let tokens = [tok("a", 0, 0.3), tok(" b", 3.0, 3.3)]
+        let lines = SpeakerAligner.lines(tokens: tokens, segments: [seg(0, 0, 4)],
+                                         boundaries: [], idFactory: counter())
         XCTAssertEqual(lines.count, 1)
         XCTAssertEqual(lines[0].text, "a b")
     }

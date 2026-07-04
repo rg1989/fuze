@@ -23,15 +23,20 @@ struct MeetingDetailView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 10) {
                     ForEach(segments) { seg in
-                        VStack(alignment: .leading, spacing: 2) {
+                        let color = speakerColor(seg.speakerId)
+                        VStack(alignment: .leading, spacing: 3) {
                             HStack(spacing: 6) {
                                 Text(seg.speakerId).font(.caption).bold()
-                                    .foregroundStyle(speakerColor(seg.speakerId))
+                                    .foregroundStyle(color)
                                 Text("\(MeetingMarkdownExporter.timecode(seg.startSeconds)) · \(String(format: "%.1fs", max(0, seg.endSeconds - seg.startSeconds)))")
                                     .font(.caption2).foregroundStyle(.tertiary)
                             }
                             Text(seg.text).textSelection(.enabled)
                         }
+                        .padding(10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(color.opacity(0.14), in: RoundedRectangle(cornerRadius: 12))
+                        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(color.opacity(0.28), lineWidth: 1))
                     }
                 }
                 .padding(14)

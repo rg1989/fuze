@@ -18,6 +18,7 @@ final class MeetingTranscriber: ObservableObject {
 
     private let asr = SlidingWindowAsrManager(config: .streaming)   // 1s hypothesis updates for live feedback
     private let diar = SortformerDiarizer(config: .fastV2_1)   // ~1.04 s latency, 4 slots
+    private let segmenter = PauseSegmenter(pauseSeconds: 1.5)  // real-silence utterance boundaries
     private let diarQueue = DispatchQueue(label: "com.rgv250cc.fuse.meeting.diar")
     private let asrFormat = AVAudioFormat(commonFormat: .pcmFormatFloat32,
                                           sampleRate: 16000, channels: 1, interleaved: false)!
@@ -77,6 +78,7 @@ final class MeetingTranscriber: ObservableObject {
     // MARK: Feed audio (called by MeetingAudioHub.onFrame, off the main thread)
     nonisolated func feed(_ frame: [Float]) {
         guard !frame.isEmpty, !stopping.withLock({ $0 }) else { return }
+        segmenter.process(frame)                               // audio-silence pause boundaries
         asrFeedCont.yield(frame)                               // ordered ASR path
         diarQueue.async { [weak self] in                      // ordered diarizer path
             guard let self, !self.stopping.withLock({ $0 }) else { return }
@@ -120,7 +122,8 @@ final class MeetingTranscriber: ObservableObject {
     private func rebuildLines() {
         let tokens = tokensByStartMs.values.sorted { $0.start < $1.start }
         let segs = (finalizedSegs + tentativeSegs).sorted { $0.start < $1.start }
-        lines = SpeakerAligner.lines(tokens: tokens, segments: segs)
+        lines = SpeakerAligner.lines(tokens: tokens, segments: segs,
+                                     boundaries: segmenter.boundaries())
     }
 
     // MARK: Finish → the final saveable lines

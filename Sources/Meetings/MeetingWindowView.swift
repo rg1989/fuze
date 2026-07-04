@@ -63,12 +63,13 @@ struct MeetingWindowView: View {
         } else {
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 10) {
+                    LazyVStack(alignment: .leading, spacing: 8) {
                         ForEach(transcriber.lines) { line in
-                            VStack(alignment: .leading, spacing: 2) {
+                            let color = speakerColor(line.speakerIndex)
+                            VStack(alignment: .leading, spacing: 3) {
                                 HStack(spacing: 6) {
                                     Text(line.speakerLabel).font(.caption).bold()
-                                        .foregroundStyle(speakerColor(line.speakerIndex))
+                                        .foregroundStyle(color)
                                     Text("\(MeetingMarkdownExporter.timecode(line.start)) · \(durationText(line))")
                                         .font(.caption2).foregroundStyle(.tertiary)
                                 }
@@ -76,6 +77,12 @@ struct MeetingWindowView: View {
                                     .foregroundStyle(line.isFinal ? .primary : .secondary)
                                     .textSelection(.enabled)
                             }
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(color.opacity(line.isFinal ? 0.14 : 0.07),
+                                        in: RoundedRectangle(cornerRadius: 12))
+                            .overlay(RoundedRectangle(cornerRadius: 12)
+                                .strokeBorder(color.opacity(0.28), lineWidth: 1))
                             .id(line.id)
                         }
                     }
