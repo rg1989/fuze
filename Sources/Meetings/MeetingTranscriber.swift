@@ -102,17 +102,9 @@ final class MeetingTranscriber: ObservableObject {
         tentativeSegs = update.tentativeSegments.map(map)
     }
 
-    /// Prefer finalized speaker coverage; only fall back to tentative segments
-    /// (whose slot labels can still change) when finalized coverage is absent.
-    private func speaker(start: Double, end: Double) -> Int {
-        if let s = SpeakerAttribution.dominantSpeaker(start: start, end: end, segments: diarSegments) {
-            return s
-        }
-        return SpeakerAttribution.dominantSpeaker(
-            start: start, end: end, segments: diarSegments + tentativeSegs) ?? 0
-    }
-
-    /// Batch-transcribe one utterance, attribute a speaker, append as a message.
+    /// Batch-transcribe one utterance, then split it across speaker turns (so a
+    /// back-to-back Speaker 1 → Speaker 2 exchange with no pause still becomes two
+    /// bubbles), and append the resulting messages in order.
     private func transcribe(_ u: Utterance) async {
         activity = .transcribing
         // Zero-pad clips below Parakeet's 0.3s floor so a short final word isn't
@@ -120,12 +112,15 @@ final class MeetingTranscriber: ObservableObject {
         let clip = u.samples.count < Self.minSamples
             ? u.samples + [Float](repeating: 0, count: Self.minSamples - u.samples.count)
             : u.samples
-        let raw = (try? await asr.transcribe(samples: clip, language: "en")) ?? ""
-        let text = TranscriptPostProcessor.restoreQuestions(
-            raw.trimmingCharacters(in: .whitespacesAndNewlines))
-        if !text.isEmpty {
-            lines.append(SpeakerLine(id: UUID(), speakerIndex: speaker(start: u.start, end: u.end),
-                                     text: text, start: u.start, end: u.end, isFinal: true))
+        let clipTokens = (try? await asr.transcribeTokens(samples: clip)) ?? []
+        // Clip-local timings → absolute audio-clock time (aligns with diarizer segs).
+        let tokens = clipTokens.map {
+            AlignToken(text: $0.text, start: u.start + $0.start, end: u.start + $0.end)
+        }
+        let segs = diarSegments + tentativeSegs
+        for var line in SpeakerAttribution.split(tokens: tokens, segments: segs) {
+            line.text = TranscriptPostProcessor.restoreQuestions(line.text)
+            if !line.text.trimmingCharacters(in: .whitespaces).isEmpty { lines.append(line) }
         }
         // Stay on "Transcribing…" through finish()'s drain; only relax while live.
         activity = (status == .running) ? .listening : .transcribing

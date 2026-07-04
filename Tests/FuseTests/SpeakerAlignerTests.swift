@@ -28,4 +28,40 @@ final class SpeakerAlignerTests: XCTestCase {
         let line = SpeakerLine(id: UUID(), speakerIndex: 0, text: "hi", start: 0, end: 1, isFinal: true)
         XCTAssertEqual(line.speakerLabel, "Speaker 1")
     }
+
+    // MARK: split (speaker-turn splitting within one utterance)
+
+    private func tok(_ t: String, _ s: Double, _ e: Double) -> AlignToken { .init(text: t, start: s, end: e) }
+    private func counter() -> () -> UUID {
+        var n = 0
+        return { defer { n += 1 }; return UUID(uuidString: "00000000-0000-0000-0000-\(String(format: "%012d", n))")! }
+    }
+
+    func testSplitBreaksIntoOneBubblePerSpeaker() {
+        // "hello there" by speaker 0, then "hi back" by speaker 1 — no pause between.
+        let tokens = [tok("hello", 0, 0.5), tok(" there", 0.5, 1.0),
+                      tok(" hi", 1.2, 1.5), tok(" back", 1.5, 2.0)]
+        let segs = [seg(0, 0, 1.1), seg(1, 1.1, 2.5)]
+        let lines = SpeakerAttribution.split(tokens: tokens, segments: segs, idFactory: counter())
+        XCTAssertEqual(lines.count, 2)
+        XCTAssertEqual(lines[0].speakerIndex, 0); XCTAssertEqual(lines[0].text, "hello there")
+        XCTAssertEqual(lines[1].speakerIndex, 1); XCTAssertEqual(lines[1].text, "hi back")
+    }
+
+    func testSplitSingleSpeakerIsOneBubble() {
+        let tokens = [tok("one", 0, 0.3), tok(" two", 0.3, 0.6), tok(" three", 0.6, 0.9)]
+        let lines = SpeakerAttribution.split(tokens: tokens, segments: [seg(0, 0, 2)], idFactory: counter())
+        XCTAssertEqual(lines.count, 1)
+        XCTAssertEqual(lines[0].text, "one two three")
+    }
+
+    func testSplitNoSegmentsDefaultsToSpeaker1() {
+        let lines = SpeakerAttribution.split(tokens: [tok("hi", 0, 1)], segments: [], idFactory: counter())
+        XCTAssertEqual(lines.count, 1)
+        XCTAssertEqual(lines[0].speakerLabel, "Speaker 1")
+    }
+
+    func testSplitEmptyTokensYieldNoLines() {
+        XCTAssertTrue(SpeakerAttribution.split(tokens: [], segments: [seg(0, 0, 1)]).isEmpty)
+    }
 }

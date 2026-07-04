@@ -49,4 +49,13 @@ actor ParakeetTranscriber: SpeechEngine {
         let result = try await manager.transcribe(samples, decoderState: &state)
         return result.text
     }
+
+    /// Like transcribe(), but returns per-token timings (clip-local seconds) so the
+    /// meeting recorder can split one utterance across speaker turns.
+    func transcribeTokens(samples: [Float]) async throws -> [(text: String, start: Double, end: Double)] {
+        guard let manager else { throw VoiceError.modelNotReady }
+        var state = try TdtDecoderState()
+        let result = try await manager.transcribe(samples, decoderState: &state)
+        return (result.tokenTimings ?? []).map { (text: $0.token, start: $0.startTime, end: $0.endTime) }
+    }
 }
