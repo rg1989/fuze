@@ -17,6 +17,9 @@ extension KeyboardShortcuts.Name {
     // Notes (Phase 8)
     static let toggleNotesPanel = Self("toggleNotesPanel", default: .init(.m, modifiers: [.control, .option]))
 
+    // Meetings (Phase 11) — start/stop a live meeting recording (⌃⌥K is free)
+    static let toggleMeeting = Self("toggleMeeting", default: .init(.k, modifiers: [.control, .option]))
+
     // Tiling (Phase 3)
     static let tileLeftHalf = Self("tileLeftHalf", default: .init(.leftArrow, modifiers: [.control, .option]))
     static let tileRightHalf = Self("tileRightHalf", default: .init(.rightArrow, modifiers: [.control, .option]))

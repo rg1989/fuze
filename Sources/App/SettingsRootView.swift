@@ -3,7 +3,7 @@ import SwiftUI
 // All settings tabs. (The old FUSE:SETTINGS_TABS anchor is retired — new
 // features add a case here and a row in `content`.)
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case general, scroll, tiling, clipboard, voice, capture, downloads, notifications, notes
+    case general, scroll, tiling, clipboard, voice, capture, downloads, notifications, notes, meetings
 
     var id: String { rawValue }
 
@@ -18,6 +18,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .downloads: return "Download Videos by URL"
         case .notifications: return "Notifications Cleaner"
         case .notes: return "Notes"
+        case .meetings: return "Meetings"
         }
     }
 
@@ -32,6 +33,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .downloads: return "arrow.down.circle"
         case .notifications: return "bell.badge"
         case .notes: return "note.text"
+        case .meetings: return "person.2.wave.2"
         }
     }
 }
@@ -93,6 +95,7 @@ struct SettingsRootView: View {
         case .downloads: DownloaderSettingsView()
         case .notifications: NotificationsSettingsView()
         case .notes: NotesSettingsView()
+        case .meetings: MeetingsSettingsView()
         }
     }
 }

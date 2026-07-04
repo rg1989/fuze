@@ -19,6 +19,7 @@ struct FuseModule: Identifiable, Equatable {
         FuseModule(key: "downloads.enabled", title: "Download Videos by URL", icon: "arrow.down.circle"),
         FuseModule(key: "notifications.enabled", title: "Notifications Cleaner", icon: "bell.badge"),
         FuseModule(key: "notes.enabled", title: "Notes", icon: "note.text"),
+        FuseModule(key: "meetings.enabled", title: "Meetings", icon: "person.2.wave.2"),
     ]
 }
 

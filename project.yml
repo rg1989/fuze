@@ -20,7 +20,7 @@ packages:
     from: "0.9.0"
   FluidAudio:
     url: https://github.com/FluidInference/FluidAudio
-    from: "0.12.4"
+    from: "0.15.4"
   GRDB:
     url: https://github.com/groue/GRDB.swift
     from: "6.27.0"

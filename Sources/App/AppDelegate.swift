@@ -19,6 +19,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var captureController: CaptureController!
     private var screenshotsFolderMenuItem: NSMenuItem!
     private var recordingsFolderMenuItem: NSMenuItem!
+    private var meetingController: MeetingController!
+    private var meetingsMenuItem: NSMenuItem!
+    private var newMeetingMenuItem: NSMenuItem!
     // FUSE:CONTROLLER-PROPS
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -67,6 +70,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             "Open Recordings Folder", icon: "film",
             action: #selector(CaptureController.openRecordingsFolderFromMenu))
         menu.addItem(recordingsFolderMenuItem)
+        if meetingController == nil { meetingController = MeetingController() }
+        meetingsMenuItem = menuItem("Meetings…", icon: "person.2.wave.2",
+                                    action: #selector(MeetingController.openLibraryFromMenu))
+        meetingsMenuItem.target = meetingController
+        menu.addItem(meetingsMenuItem)
+        newMeetingMenuItem = menuItem("New Meeting", icon: "record.circle",
+                                      action: #selector(MeetingController.toggleRecordingFromMenu))
+        newMeetingMenuItem.target = meetingController
+        newMeetingMenuItem.setShortcut(for: .toggleMeeting)
+        menu.addItem(newMeetingMenuItem)
         // FUSE:MENU-ITEMS
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit Fuse", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
@@ -98,6 +111,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         captureController.start()
         screenshotsFolderMenuItem.target = captureController
         recordingsFolderMenuItem.target = captureController
+        if meetingController == nil { meetingController = MeetingController() }
+        meetingController.start()
         GlobalHotkeyTap.shared.start()
         // FUSE:CONTROLLER-START
 
@@ -166,6 +181,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         downloadsMenuItem.isEnabled = defaults.bool(forKey: "downloads.enabled")
         clearNotificationsMenuItem.isEnabled = defaults.bool(forKey: "notifications.enabled")
         notesMenuItem.isEnabled = defaults.bool(forKey: "notes.enabled")
+        meetingsMenuItem.isEnabled = defaults.bool(forKey: "meetings.enabled")
+        newMeetingMenuItem.isEnabled = defaults.bool(forKey: "meetings.enabled")
     }
 
     private func menuItem(_ title: String, icon: String,
