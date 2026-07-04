@@ -20,9 +20,10 @@ final class VoiceController: ObservableObject {
     private var session = VoiceSession()
     private var transcriptionGeneration = 0
     private let recorder = AudioRecorder()
-    private let transcriber = Transcriber()
+    private let whisper = Transcriber()
+    private let parakeet = ParakeetTranscriber()
     private let hud = RecordingHUD()
-    private var lastRequestedModelName: String?
+    private var lastRequestedKey: String?
     private var defaultsObserver: NSObjectProtocol?
     private var pauseObserver: NSObjectProtocol?
     private var modifierMonitor: ModifierHoldMonitor?
@@ -37,9 +38,25 @@ final class VoiceController: ObservableObject {
         UserDefaults.standard.string(forKey: "voice.language") ?? "en"
     }
 
+    private var configuredEngine: String {
+        UserDefaults.standard.string(forKey: "voice.engine") ?? "whisper"
+    }
+
+    /// The selected backend. Whisper reads `voice.modelName`; Parakeet is fixed.
+    private var engine: SpeechEngine {
+        configuredEngine == "parakeet" ? parakeet : whisper
+    }
+
+    /// Identity of "what should be loaded right now" — combines engine + model so
+    /// switching either triggers a reload and a fresh status.
+    private var configuredModelKey: String {
+        configuredEngine == "parakeet" ? "parakeet" : "whisper|\(configuredModelName)"
+    }
+
     func start() {
         UserDefaults.standard.register(defaults: [
             "voice.enabled": true,
+            "voice.engine": "whisper",
             "voice.modelName": "openai_whisper-base.en",
             "voice.language": "en",
             "voice.removeFillers": true,
@@ -176,9 +193,11 @@ final class VoiceController: ObservableObject {
         }
         VoiceSounds.playStopped()   // valid take captured — stopped listening
 
+        let engine = self.engine
         let modelName = configuredModelName
         let language = configuredLanguage
-        if case .ready(let loaded) = modelStatus, loaded == modelName {
+        let key = configuredModelKey
+        if case .ready(let loaded) = modelStatus, loaded == key {
             hud.show(.transcribing)
         } else {
             hud.show(.message("Preparing model — first use can take minutes…"))
@@ -192,10 +211,10 @@ final class VoiceController: ObservableObject {
         Task { [weak self] in
             guard let self else { return }
             do {
-                try await self.transcriber.prepare(modelName: modelName)
+                try await engine.prepare(modelName: modelName)
                 guard generation == self.transcriptionGeneration else { return }
                 self.hud.show(.transcribing)
-                let raw = try await self.transcriber.transcribe(samples: samples, language: language)
+                let raw = try await engine.transcribe(samples: samples, language: language)
                 guard generation == self.transcriptionGeneration else { return }
                 Log.voice.info("transcribed \(samples.count) samples -> \(raw.count) chars")
                 self.deliver(raw: raw)
@@ -246,23 +265,25 @@ final class VoiceController: ObservableObject {
     // MARK: - Model preparation
 
     private func prepareModel() {
+        let engine = self.engine
         let modelName = configuredModelName
-        guard modelName != lastRequestedModelName else { return }
-        lastRequestedModelName = modelName
+        let key = configuredModelKey
+        guard key != lastRequestedKey else { return }
+        lastRequestedKey = key
         modelStatus = .downloading
-        Log.voice.info("preparing whisper model: \(modelName)")
+        Log.voice.info("preparing speech model: \(key, privacy: .public)")
         Task { [weak self] in
             guard let self else { return }
             do {
-                try await self.transcriber.prepare(modelName: modelName)
+                try await engine.prepare(modelName: modelName)
                 // Settings may have changed mid-download; only publish if still current.
-                if self.lastRequestedModelName == modelName {
-                    self.modelStatus = .ready(modelName)
-                    Log.voice.info("whisper model ready: \(modelName)")
+                if self.lastRequestedKey == key {
+                    self.modelStatus = .ready(key)
+                    Log.voice.info("speech model ready: \(key, privacy: .public)")
                 }
             } catch {
                 Log.voice.error("model load failed: \(String(describing: error))")
-                if self.lastRequestedModelName == modelName {
+                if self.lastRequestedKey == key {
                     self.modelStatus = .failed(String(describing: error))
                 }
             }

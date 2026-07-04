@@ -28,7 +28,9 @@ final class DownloaderController: NSObject {
         panel.contentView = NSHostingView(
             rootView: DownloadsPickerView(model: pickerModel, queue: queue))
         pickerModel.onClose = { [weak self] in self?.hidePicker() }
-        panel.onResignKey = { [weak self] in self?.hidePicker() }
+        // Stay open as a floating window when focus moves elsewhere; dismiss only
+        // via Esc or the close button (onClose). Previously resignKey auto-closed
+        // it, which made clicking any other app dismiss the downloads picker.
     }
 
     func start() {

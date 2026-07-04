@@ -3,6 +3,7 @@ import KeyboardShortcuts
 import SwiftUI
 
 struct VoiceSettingsView: View {
+    @AppStorage("voice.engine") private var engine = "whisper"
     @AppStorage("voice.modelName") private var modelName = "openai_whisper-base.en"
     @AppStorage("voice.language") private var language = "en"
     @AppStorage("voice.removeFillers") private var removeFillers = true
@@ -27,20 +28,55 @@ struct VoiceSettingsView: View {
         ("openai_whisper-large-v3_turbo", "Large v3 Turbo — multilingual, best, slow first load"),
     ]
 
+    /// Names of the ~99 languages the multilingual Whisper model can transcribe.
+    /// Shown as a hover tooltip so the two-letter code field isn't a guessing game.
+    private static let whisperLanguages =
+        "English, Chinese, German, Spanish, Russian, Korean, French, Japanese, "
+        + "Portuguese, Turkish, Polish, Catalan, Dutch, Arabic, Swedish, Italian, "
+        + "Indonesian, Hindi, Finnish, Vietnamese, Hebrew, Ukrainian, Greek, Malay, "
+        + "Czech, Romanian, Danish, Hungarian, Tamil, Norwegian, Thai, Urdu, "
+        + "Croatian, Bulgarian, Lithuanian, Latin, Maori, Malayalam, Welsh, Slovak, "
+        + "Telugu, Persian, Latvian, Bengali, Serbian, Azerbaijani, Slovenian, "
+        + "Kannada, Estonian, Macedonian, Breton, Basque, Icelandic, Armenian, "
+        + "Nepali, Mongolian, Bosnian, Kazakh, Albanian, Swahili, Galician, Marathi, "
+        + "Punjabi, Sinhala, Khmer, Shona, Yoruba, Somali, Afrikaans, Occitan, "
+        + "Georgian, Belarusian, Tajik, Sindhi, Gujarati, Amharic, Yiddish, Lao, "
+        + "Uzbek, Faroese, Haitian Creole, Pashto, Turkmen, Nynorsk, Maltese, "
+        + "Sanskrit, Luxembourgish, Myanmar, Tibetan, Tagalog, Malagasy, Assamese, "
+        + "Tatar, Hawaiian, Lingala, Hausa, Bashkir, Javanese, Sundanese, Cantonese"
+
     var body: some View {
         Form {
             Section("Model") {
-                Picker("Whisper model", selection: $modelName) {
-                    ForEach(Self.models, id: \.name) { model in
-                        Text(model.label).tag(model.name)
-                    }
+                Picker("Engine", selection: $engine) {
+                    Text("Whisper (OpenAI)").tag("whisper")
+                    Text("Parakeet (NVIDIA)").tag("parakeet")
                 }
-                LabeledContent("Status") { statusView }
-                TextField("Language code", text: $language)
-                    .frame(maxWidth: 220)
-                Text("Two-letter code, e.g. \"en\", \"de\". Ignored by English-only (.en) models.")
+                // Parakeet ships here as the English-only v2 model: faster and
+                // more accurate for English, but it can ONLY transcribe English.
+                // Whisper's Large v3 Turbo model is the multilingual option.
+                Text("Parakeet is English-only but faster and very accurate. For any other language, use Whisper with the Large v3 Turbo (multilingual) model below.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+
+                if engine == "whisper" {
+                    Picker("Whisper model", selection: $modelName) {
+                        ForEach(Self.models, id: \.name) { model in
+                            Text(model.label).tag(model.name)
+                                .help(model.name.hasSuffix(".en")
+                                      ? "English only."
+                                      : "Multilingual — supports: \(Self.whisperLanguages)")
+                        }
+                    }
+                    TextField("Language code", text: $language)
+                        .frame(maxWidth: 220)
+                        .help("Languages the multilingual model supports: \(Self.whisperLanguages)")
+                    Text("Two-letter code, e.g. \"en\", \"de\", \"fr\". Ignored by English-only (.en) models. Hover for the full language list.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                LabeledContent("Status") { statusView }
             }
 
             Section("Shortcut") {

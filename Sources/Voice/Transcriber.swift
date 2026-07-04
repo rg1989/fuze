@@ -3,7 +3,7 @@ import WhisperKit
 
 /// Owns the WhisperKit pipeline. First prepare(modelName:) downloads the CoreML
 /// model from Hugging Face (argmaxinc/whisperkit-coreml); cached on disk after.
-actor Transcriber {
+actor Transcriber: SpeechEngine {
     private var whisperKit: WhisperKit?
     private(set) var loadedModelName: String?
     private var isPreparing = false

@@ -18,6 +18,9 @@ packages:
   WhisperKit:
     url: https://github.com/argmaxinc/WhisperKit
     from: "0.9.0"
+  FluidAudio:
+    url: https://github.com/FluidInference/FluidAudio
+    from: "0.12.4"
   GRDB:
     url: https://github.com/groue/GRDB.swift
     from: "6.27.0"
@@ -35,6 +38,7 @@ targets:
     dependencies:
       - package: KeyboardShortcuts
       - package: WhisperKit
+      - package: FluidAudio
       - package: GRDB
         product: GRDB
     info:

@@ -5,6 +5,7 @@ Fuse.entitlements
 
 # Build artifacts
 .build/
+.build-debug/
 .build-release/
 DerivedData/
 *.xcresult
