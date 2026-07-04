@@ -53,9 +53,13 @@ enum SpeakerAligner {
 
     /// Group tokens → words (a leading-space token starts a new word), attribute
     /// each word to a speaker, and coalesce consecutive same-speaker words into
-    /// lines. A finalized attribution freezes a line; a tentative one leaves it
-    /// open so a later tick can extend it.
+    /// lines. A new line is started on a speaker change OR a silence gap longer
+    /// than `pauseGap` (so each pause-separated utterance is its own timestamped
+    /// message). Words with no covering diarizer segment default to Speaker 1, so
+    /// text still shows live and for solo speakers before diarization catches up.
+    // ponytail: 1.5 s pause = new message. Tune if it splits mid-sentence / merges turns.
     static func lines(tokens: [AlignToken], segments: [AlignSpeakerSegment],
+                      pauseGap: Double = 1.5,
                       idFactory: () -> UUID = { UUID() }) -> [SpeakerLine] {
         struct Word { var text: String; var start: Double; var end: Double }
         var words: [Word] = []
@@ -71,12 +75,14 @@ enum SpeakerAligner {
         }
         var lines: [SpeakerLine] = []
         for w in words where !w.text.isEmpty {
-            guard let (idx, isFinal) = speakerIndex(forWordStart: w.start, end: w.end, segments: segments)
-            else { continue }
-            // Coalesce consecutive same-speaker words into one line. A whole pass
-            // is recomputed each tick, so merge regardless of finality; the line
-            // is "final" (solid) only when every word in it is finalized.
-            if var last = lines.last, last.speakerIndex == idx {
+            // No covering segment yet → default to Speaker 1 (index 0), tentative.
+            let attribution = speakerIndex(forWordStart: w.start, end: w.end, segments: segments)
+            let idx = attribution?.index ?? 0
+            let isFinal = attribution?.isFinal ?? false
+            // Extend the current line only for the same speaker with no long pause;
+            // otherwise start a new (timestamped) message. Recomputed each tick, so
+            // merge regardless of finality; the line is solid only when all words are.
+            if var last = lines.last, last.speakerIndex == idx, w.start - last.end <= pauseGap {
                 last.text += " " + w.text
                 last.end = w.end
                 last.isFinal = last.isFinal && isFinal

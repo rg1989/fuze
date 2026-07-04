@@ -16,7 +16,7 @@ final class MeetingTranscriber: ObservableObject {
 
     func markFailed(_ message: String) { status = .failed(message) }
 
-    private let asr = SlidingWindowAsrManager()
+    private let asr = SlidingWindowAsrManager(config: .streaming)   // 1s hypothesis updates for live feedback
     private let diar = SortformerDiarizer(config: .fastV2_1)   // ~1.04 s latency, 4 slots
     private let diarQueue = DispatchQueue(label: "com.rgv250cc.fuse.meeting.diar")
     private let asrFormat = AVAudioFormat(commonFormat: .pcmFormatFloat32,

@@ -24,8 +24,12 @@ struct MeetingDetailView: View {
                 LazyVStack(alignment: .leading, spacing: 10) {
                     ForEach(segments) { seg in
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(seg.speakerId).font(.caption).bold()
-                                .foregroundStyle(speakerColor(seg.speakerId))
+                            HStack(spacing: 6) {
+                                Text(seg.speakerId).font(.caption).bold()
+                                    .foregroundStyle(speakerColor(seg.speakerId))
+                                Text("\(MeetingMarkdownExporter.timecode(seg.startSeconds)) · \(String(format: "%.1fs", max(0, seg.endSeconds - seg.startSeconds)))")
+                                    .font(.caption2).foregroundStyle(.tertiary)
+                            }
                             Text(seg.text).textSelection(.enabled)
                         }
                     }

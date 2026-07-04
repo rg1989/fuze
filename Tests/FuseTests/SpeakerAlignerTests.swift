@@ -49,8 +49,38 @@ final class SpeakerAlignerTests: XCTestCase {
         XCTAssertEqual(lines[1].speakerIndex, 1)
     }
 
-    func testEmptyInputsYieldNoLines() {
+    func testNoTokensYieldNoLines() {
         XCTAssertTrue(SpeakerAligner.lines(tokens: [], segments: []).isEmpty)
-        XCTAssertTrue(SpeakerAligner.lines(tokens: [tok("x", 0, 1)], segments: []).isEmpty)
+        XCTAssertTrue(SpeakerAligner.lines(tokens: [], segments: [seg(0, 0, 1)]).isEmpty)
+    }
+
+    func testDefaultsToSpeaker1WhenNoDiarizationYet() {
+        // No diarizer segments (solo speaker / startup) → text still appears,
+        // attributed to Speaker 1 and marked tentative.
+        let lines = SpeakerAligner.lines(
+            tokens: [tok("hello", 0, 0.5), tok(" world", 0.5, 1.0)],
+            segments: [], idFactory: counter())
+        XCTAssertEqual(lines.count, 1)
+        XCTAssertEqual(lines[0].speakerLabel, "Speaker 1")
+        XCTAssertEqual(lines[0].text, "hello world")
+        XCTAssertEqual(lines[0].isFinal, false)
+    }
+
+    func testLongPauseStartsNewMessage() {
+        // Same speaker, but a >1.5s silence gap splits into two timestamped messages.
+        let tokens = [tok("first", 0, 0.5), tok(" part", 0.5, 1.0),
+                      tok(" second", 3.0, 3.5)]           // 2.0s gap after "part"
+        let lines = SpeakerAligner.lines(tokens: tokens, segments: [seg(0, 0, 5)], idFactory: counter())
+        XCTAssertEqual(lines.count, 2)
+        XCTAssertEqual(lines[0].text, "first part")
+        XCTAssertEqual(lines[1].text, "second")
+        XCTAssertEqual(lines[1].start, 3.0)              // new message carries its own start time
+    }
+
+    func testShortGapKeepsSameMessage() {
+        let tokens = [tok("a", 0, 0.3), tok(" b", 0.6, 0.9)]   // 0.3s gap < 1.5s
+        let lines = SpeakerAligner.lines(tokens: tokens, segments: [seg(0, 0, 2)], idFactory: counter())
+        XCTAssertEqual(lines.count, 1)
+        XCTAssertEqual(lines[0].text, "a b")
     }
 }

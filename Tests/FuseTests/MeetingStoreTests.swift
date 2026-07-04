@@ -47,6 +47,6 @@ final class MeetingStoreTests: XCTestCase {
         let store = try makeStore()
         let m = try save(store, title: "Sync", [("Speaker 1", "a"), ("Speaker 2", "b")])
         let md = try store.export(meetingID: m.id!)
-        XCTAssertEqual(md, "# Sync\n[Speaker 1] a\n[Speaker 2] b\n")
+        XCTAssertEqual(md, "# Sync\n[0:00–0:01] Speaker 1: a\n[0:01–0:02] Speaker 2: b\n")
     }
 }

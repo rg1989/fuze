@@ -66,10 +66,15 @@ struct MeetingWindowView: View {
                     LazyVStack(alignment: .leading, spacing: 10) {
                         ForEach(transcriber.lines) { line in
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(line.speakerLabel).font(.caption).bold()
-                                    .foregroundStyle(speakerColor(line.speakerIndex))
+                                HStack(spacing: 6) {
+                                    Text(line.speakerLabel).font(.caption).bold()
+                                        .foregroundStyle(speakerColor(line.speakerIndex))
+                                    Text("\(MeetingMarkdownExporter.timecode(line.start)) · \(durationText(line))")
+                                        .font(.caption2).foregroundStyle(.tertiary)
+                                }
                                 Text(line.text)
                                     .foregroundStyle(line.isFinal ? .primary : .secondary)
+                                    .textSelection(.enabled)
                             }
                             .id(line.id)
                         }
@@ -96,5 +101,10 @@ struct MeetingWindowView: View {
 
     private func speakerColor(_ i: Int) -> Color {
         [.blue, .green, .orange, .purple][i % 4]
+    }
+
+    /// "2.4s" — how long this message took to say.
+    private func durationText(_ line: SpeakerLine) -> String {
+        String(format: "%.1fs", max(0, line.end - line.start))
     }
 }

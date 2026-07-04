@@ -190,11 +190,12 @@ final class MeetingController: NSObject {
         var cleaned: String? = nil
         if UserDefaults.standard.bool(forKey: "meetings.cleanupOnStop") {
             let rmFill = UserDefaults.standard.bool(forKey: "meetings.removeFillers")
-            // Clean each line's TEXT only — keep the "[Speaker N]" label and the
-            // per-line newlines the whole-transcript cleaner would otherwise strip.
+            // Clean each line's TEXT only — keep the timecode + "Speaker N" label
+            // and the per-line newlines the whole-transcript cleaner would strip.
             cleaned = lines.map { line in
                 let body = TranscriptPostProcessor.clean(line.text, removeFillers: rmFill) ?? ""
-                return "[\(line.speakerLabel)] \(body)"
+                let span = "\(MeetingMarkdownExporter.timecode(line.start))–\(MeetingMarkdownExporter.timecode(line.end))"
+                return "[\(span)] \(line.speakerLabel): \(body)"
             }.joined(separator: "\n")
         }
         _ = try? store?.saveMeeting(title: title, date: sessionStart,
