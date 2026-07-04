@@ -54,12 +54,13 @@ struct SettingsRootView: View {
         .frame(minWidth: 800, minHeight: 560)
     }
 
-    /// Icon-only tabs (so all N fit without clipping the window), with the tab
-    /// name shown in a label below that follows the hovered tab and falls back to
-    /// the selected tab — you always see where you are, and can discover the rest
-    /// by hovering. A native tooltip mirrors the name for accessibility.
+    /// Icon-only tabs (so all N fit without clipping the window). The tab name
+    /// lives in a full-width header band below the icons that tints on hover and
+    /// names the hovered tab, falling back to the selected one — you always see
+    /// where you are, and discover the rest by hovering. A native tooltip mirrors
+    /// the name for accessibility.
     private var tabBar: some View {
-        VStack(spacing: 3) {
+        VStack(spacing: 8) {
             HStack(spacing: 4) {
                 ForEach(SettingsTab.allCases) { tab in
                     Button {
@@ -82,13 +83,20 @@ struct SettingsRootView: View {
                     }
                 }
             }
+            .padding(.horizontal, 8)
+
+            // Full-width header band spanning the window, naming the hovered
+            // (or selected) tab and tinting with the accent while hovering.
             Text((hovered ?? selection).title)
-                .font(.caption)
+                .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(hovered == nil ? .secondary : .primary)
-                .frame(height: 14)
-                .animation(.easeOut(duration: 0.1), value: hovered)
+                .frame(maxWidth: .infinity)
+                .frame(height: 26)
+                .background(hovered == nil ? Color.primary.opacity(0.04)
+                                           : Color.accentColor.opacity(0.10))
+                .animation(.easeOut(duration: 0.12), value: hovered)
         }
-        .padding(.vertical, 8)
+        .padding(.top, 8)
         .frame(maxWidth: .infinity)
     }
 
