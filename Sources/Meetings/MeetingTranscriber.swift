@@ -3,166 +3,162 @@ import AVFoundation
 import os
 import FluidAudio
 
-/// The streaming meeting engine. Owns a streaming Parakeet ASR
-/// (`SlidingWindowAsrManager`, English v2) and a streaming speaker diarizer
-/// (`SortformerDiarizer`, .fastV2_1). Both are fed the same 16 kHz mono frames
-/// from `MeetingAudioHub` on one clock; their second-based timestamps are
-/// aligned by the pure `SpeakerAligner` into `[SpeakerLine]`.
+/// The meeting engine. Segments the audio into pause-delimited utterances
+/// (`UtteranceBuffer`) and transcribes each with BATCH Parakeet
+/// (`ParakeetTranscriber` — the same accurate path dictation uses), while a
+/// streaming `SortformerDiarizer` runs continuously to say WHO spoke. Each
+/// finished utterance becomes one speaker-attributed message. Publishes a live
+/// `activity` (listening → transcribing) so the UI can show the pipeline.
 @MainActor
 final class MeetingTranscriber: ObservableObject {
-    @Published private(set) var lines: [SpeakerLine] = []
+    @Published private(set) var lines: [SpeakerLine] = []       // finished messages, in order
     @Published private(set) var status: Status = .idle
+    @Published private(set) var activity: Activity = .idle
     enum Status: Equatable { case idle, loading, running, finishing, saved, failed(String) }
+    enum Activity: Equatable { case idle, listening, transcribing }
 
     func markFailed(_ message: String) { status = .failed(message) }
 
-    private let asr = SlidingWindowAsrManager(config: .streaming)   // 1s hypothesis updates for live feedback
-    private let diar = SortformerDiarizer(config: .fastV2_1)   // ~1.04 s latency, 4 slots
-    private let segmenter = PauseSegmenter(pauseSeconds: 1.5)  // real-silence utterance boundaries
+    private let asr = ParakeetTranscriber.shared                // batch Parakeet, shared with dictation
+    private let diar = SortformerDiarizer(config: .fastV2_1)    // who's talking, streaming
     private let diarQueue = DispatchQueue(label: "com.rgv250cc.fuse.meeting.diar")
-    private let asrFormat = AVAudioFormat(commonFormat: .pcmFormatFloat32,
-                                          sampleRate: 16000, channels: 1, interleaved: false)!
+    private let buffer = UtteranceBuffer(pauseSeconds: 1.0, maxSeconds: 12)
 
-    // Tokens keyed by start time in ms — a confirmed token overwrites the volatile
-    // one at the same time; nothing is dropped when one update replaces another.
-    private var tokensByStartMs: [Int: AlignToken] = [:]
-    private var finalizedSegs: [AlignSpeakerSegment] = []
+    private var diarSegments: [AlignSpeakerSegment] = []        // finalized, accumulated
     private var tentativeSegs: [AlignSpeakerSegment] = []
 
-    // Ordered ASR feed: feed() yields frames into asrFeedCont; a single pump
-    // awaits streamAudio one buffer at a time, preserving capture order (no
-    // per-frame Task). The continuation is a nonisolated Sendable let so the
-    // audio thread can yield to it; the stream is consumed once by the pump.
-    private let asrFeed: AsyncStream<[Float]>
-    private nonisolated let asrFeedCont: AsyncStream<[Float]>.Continuation
-    private var asrPump: Task<Void, Never>?
-    private var consumer: Task<Void, Never>?
+    // Ordered per-utterance transcription: the buffer yields utterances here and
+    // one pump transcribes them in order (no overlap, messages stay in sequence).
+    private struct Utterance { let samples: [Float]; let start: Double; let end: Double }
+    private let uttStream: AsyncStream<Utterance>
+    private nonisolated let uttCont: AsyncStream<Utterance>.Continuation
+    private var pump: Task<Void, Never>?
 
-    // Set once teardown begins so late audio-thread callbacks drop their frames.
     private let stopping = OSAllocatedUnfairLock(initialState: false)
 
+    /// Parakeet's minimum input (0.3s at 16 kHz); shorter clips are zero-padded.
+    private static let minSamples = 4800
+
     init() {
-        (asrFeed, asrFeedCont) = AsyncStream<[Float]>.makeStream(bufferingPolicy: .unbounded)
+        (uttStream, uttCont) = AsyncStream.makeStream(bufferingPolicy: .unbounded)
+        buffer.onUtterance = { [weak self] samples, start, end in
+            self?.uttCont.yield(Utterance(samples: samples, start: start, end: end))
+        }
+        buffer.onStatus = { [weak self] speaking, _ in
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated { self?.updateListening(speaking: speaking) }
+            }
+        }
     }
 
     // MARK: Load
     func load() async throws {
         status = .loading
-        let models = try await AsrModels.downloadAndLoad(version: .v2)     // English-tuned 0.6B
-        try await asr.loadModels(models)
+        try await asr.prepare(modelName: "")                    // Parakeet v2 batch models (shared)
         let diarModels = try await SortformerModels.loadFromHuggingFace(
             config: .fastV2_1, computeUnits: .all)
         diar.initialize(models: diarModels)
     }
 
-    // MARK: Start streaming
+    // MARK: Start
     func start() async throws {
-        let updates = await asr.transcriptionUpdates          // grab exactly once
-        try await asr.startStreaming(source: .microphone)     // source is a label only
         status = .running
-
-        let feedStream = asrFeed
-        asrPump = Task { [weak self] in
-            for await frame in feedStream {
-                guard let self, let buf = self.makeBuffer(frame) else { continue }
-                await self.asr.streamAudio(buf)               // ordered, one at a time
-            }
-        }
-        consumer = Task { [weak self] in
-            for await u in updates {
-                await MainActor.run { self?.ingestASR(u) }
+        activity = .listening
+        pump = Task { [weak self, uttStream] in
+            for await u in uttStream {
+                if Task.isCancelled { break }
+                guard let self else { break }
+                await self.transcribe(u)
             }
         }
     }
 
-    // MARK: Feed audio (called by MeetingAudioHub.onFrame, off the main thread)
+    // MARK: Feed audio (off the main thread)
     nonisolated func feed(_ frame: [Float]) {
         guard !frame.isEmpty, !stopping.withLock({ $0 }) else { return }
-        segmenter.process(frame)                               // audio-silence pause boundaries
-        asrFeedCont.yield(frame)                               // ordered ASR path
-        diarQueue.async { [weak self] in                      // ordered diarizer path
-            guard let self, !self.stopping.withLock({ $0 }) else { return }
-            guard let update = try? self.diar.process(samples: frame, sourceSampleRate: nil) else { return }
-            // main-queue FIFO preserves order relative to other diar updates.
-            DispatchQueue.main.async { MainActor.assumeIsolated { self.ingestDiar(update) } }
+        buffer.feed(frame)                                      // → utterances (pause-delimited)
+        // Diarize continuously. No stopping-guard inside: a frame accepted here
+        // must reach the diarizer so finalizeSession() at stop covers the tail.
+        diarQueue.async { [weak self] in
+            guard let self else { return }
+            if let update = try? self.diar.process(samples: frame, sourceSampleRate: nil) {
+                DispatchQueue.main.async { MainActor.assumeIsolated { self.ingestDiar(update) } }
+            }
         }
     }
 
-    nonisolated private func makeBuffer(_ frame: [Float]) -> AVAudioPCMBuffer? {
-        guard let buf = AVAudioPCMBuffer(pcmFormat: asrFormat,
-                                         frameCapacity: AVAudioFrameCount(frame.count)) else { return nil }
-        buf.frameLength = AVAudioFrameCount(frame.count)
-        frame.withUnsafeBufferPointer { src in
-            buf.floatChannelData!.pointee.update(from: src.baseAddress!, count: frame.count)
-        }
-        return buf
+    private func updateListening(speaking: Bool) {
+        guard status == .running, activity != .transcribing else { return }
+        activity = .listening
     }
 
-    // MARK: Ingest ASR update — merge tokens by start time (no loss, no dup)
-    private func ingestASR(_ u: SlidingWindowTranscriptionUpdate) {
-        for t in u.tokenTimings {
-            let key = Int((t.startTime * 1000).rounded())
-            tokensByStartMs[key] = AlignToken(text: t.token, start: t.startTime, end: t.endTime)
-        }
-        rebuildLines()
-    }
-
-    // MARK: Ingest diarizer update
     private func ingestDiar(_ update: DiarizerTimelineUpdate) {
         func map(_ s: DiarizerSegment) -> AlignSpeakerSegment {
             AlignSpeakerSegment(speakerIndex: s.speakerIndex,
                                 start: Double(s.startTime), end: Double(s.endTime),
                                 isFinalized: s.isFinalized)
         }
-        finalizedSegs.append(contentsOf: update.finalizedSegments.map(map))
-        tentativeSegs = update.tentativeSegments.map(map)      // replace tentative each tick
-        rebuildLines()
+        diarSegments.append(contentsOf: update.finalizedSegments.map(map))
+        tentativeSegs = update.tentativeSegments.map(map)
     }
 
-    private func rebuildLines() {
-        let tokens = tokensByStartMs.values.sorted { $0.start < $1.start }
-        let segs = (finalizedSegs + tentativeSegs).sorted { $0.start < $1.start }
-        lines = SpeakerAligner.lines(tokens: tokens, segments: segs,
-                                     boundaries: segmenter.boundaries())
+    /// Prefer finalized speaker coverage; only fall back to tentative segments
+    /// (whose slot labels can still change) when finalized coverage is absent.
+    private func speaker(start: Double, end: Double) -> Int {
+        if let s = SpeakerAttribution.dominantSpeaker(start: start, end: end, segments: diarSegments) {
+            return s
+        }
+        return SpeakerAttribution.dominantSpeaker(
+            start: start, end: end, segments: diarSegments + tentativeSegs) ?? 0
     }
 
-    // MARK: Finish → the final saveable lines
+    /// Batch-transcribe one utterance, attribute a speaker, append as a message.
+    private func transcribe(_ u: Utterance) async {
+        activity = .transcribing
+        // Zero-pad clips below Parakeet's 0.3s floor so a short final word isn't
+        // rejected by the model's minimum-length guard.
+        let clip = u.samples.count < Self.minSamples
+            ? u.samples + [Float](repeating: 0, count: Self.minSamples - u.samples.count)
+            : u.samples
+        let raw = (try? await asr.transcribe(samples: clip, language: "en")) ?? ""
+        let text = TranscriptPostProcessor.restoreQuestions(
+            raw.trimmingCharacters(in: .whitespacesAndNewlines))
+        if !text.isEmpty {
+            lines.append(SpeakerLine(id: UUID(), speakerIndex: speaker(start: u.start, end: u.end),
+                                     text: text, start: u.start, end: u.end, isFinal: true))
+        }
+        // Stay on "Transcribing…" through finish()'s drain; only relax while live.
+        activity = (status == .running) ? .listening : .transcribing
+    }
+
+    // MARK: Finish
     func finish() async -> [SpeakerLine] {
         status = .finishing
-        stopping.withLock { $0 = true }        // drop any further audio-thread frames
-
-        // 1. Close the ordered feed and let the pump flush every buffered frame
-        //    into the ASR actor (in order) before we finish the stream.
-        asrFeedCont.finish()
-        await asrPump?.value; asrPump = nil
-
-        // 2. Finish ASR — processes the remaining windows and yields the trailing
-        //    updates into the (unbounded) updates buffer. Note: finish() does NOT
-        //    terminate the transcriptionUpdates stream (only cancel()/cleanup() do,
-        //    per SlidingWindowAsrManager 0.15.4). So we then cleanup() to finish
-        //    the stream; the already-buffered trailing updates are still delivered
-        //    to the consumer before its `for await` ends. This drains the tail
-        //    without deadlocking on a stream that would otherwise never end.
-        do { _ = try await asr.finish() }
-        catch { Log.voice.error("meeting ASR finish failed: \(String(describing: error))") }
-        await asr.cleanup()                     // cancel + finish the updates stream (idempotent)
-        await consumer?.value                   // drain every buffered update, incl. the tail
-        consumer = nil
-
-        // 3. Drain queued diarizer work and finalize OFF the main thread, then
-        //    ingest the tail back on the MainActor.
+        activity = .transcribing
+        stopping.withLock { $0 = true }         // stop accepting NEW frames (queued diar still runs)
+        // Finalize the diarizer FIRST (serial queue → runs after all queued
+        // process() calls) and ingest its tail, so the last utterance is
+        // attributed from finalized speaker segments — not stale/absent ones.
         let tail: DiarizerTimelineUpdate? = await withCheckedContinuation { c in
             diarQueue.async { c.resume(returning: try? self.diar.finalizeSession()) }
         }
         if let tail { ingestDiar(tail) }
-
-        rebuildLines()
+        buffer.flush()                          // close the in-progress utterance (yields it)
+        uttCont.finish()                        // end the stream after buffered utterances
+        await drainPump()                       // transcribe every remaining utterance, in order
         status = .saved
+        activity = .idle
         return lines
     }
 
-    func teardown() async {
-        stopping.withLock { $0 = true }
-        await asr.cleanup()                     // releases models
+    /// Await the pump, but cap the wait so a wedged CoreML call can't hang Stop.
+    private func drainPump() async {
+        guard let pump else { return }
+        let watchdog = Task { try? await Task.sleep(nanoseconds: 60_000_000_000); pump.cancel() }
+        await pump.value
+        watchdog.cancel()
+        self.pump = nil
     }
+
+    func teardown() async { /* the Parakeet model is shared; nothing to release here */ }
 }

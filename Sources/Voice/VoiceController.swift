@@ -21,7 +21,7 @@ final class VoiceController: ObservableObject {
     private var transcriptionGeneration = 0
     private let recorder = AudioRecorder()
     private let whisper = Transcriber()
-    private let parakeet = ParakeetTranscriber()
+    private let parakeet = ParakeetTranscriber.shared
     private let hud = RecordingHUD()
     private var lastRequestedKey: String?
     private var defaultsObserver: NSObjectProtocol?

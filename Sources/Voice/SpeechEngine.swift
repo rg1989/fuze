@@ -20,6 +20,11 @@ protocol SpeechEngine: Sendable {
 // ponytail: hardcoded to v2 (English). FluidAudio also ships a multilingual v3
 // (25 European langs + Japanese) — switch `.v2` → `.v3` here if you want it.
 actor ParakeetTranscriber: SpeechEngine {
+    /// Shared instance so dictation and meetings load the ~450 MB v2 model only
+    /// once. Safe to use concurrently — each transcribe() uses a fresh decoder
+    /// state and the underlying AsrManager serializes calls.
+    static let shared = ParakeetTranscriber()
+
     private var manager: AsrManager?
     private var isPreparing = false
 
