@@ -79,10 +79,20 @@ struct ReviewActionBar: View {
 struct ScreenshotReviewView: View {
     @ObservedObject var state: ImageEditorState
     var onAction: (ReviewAction) -> Void
+    @StateObject private var textExtract = TextExtractModel()
 
     var body: some View {
         VStack(spacing: 0) {
-            ImageEditorPane(state: state)
+            HStack(spacing: 0) {
+                // OCR the base image (post-crop/pixelate, without annotation overlays).
+                ImageEditorPane(state: state, onExtractText: { textExtract.run(on: state.image) })
+                if textExtract.isOpen {
+                    Divider()
+                    TextExtractSidePanel(model: textExtract)
+                        .transition(.move(edge: .trailing))
+                }
+            }
+            .animation(.easeOut(duration: 0.18), value: textExtract.isOpen)
             Divider()
             ReviewActionBar(onAction: onAction)
                 .padding(12)

@@ -240,6 +240,8 @@ final class ImageEditorState: ObservableObject {
 
 struct ImageEditorPane: View {
     @ObservedObject var state: ImageEditorState
+    /// When set, the toolbar shows an "Extract Text" button (screenshot review).
+    var onExtractText: (() -> Void)? = nil
     @FocusState private var textFieldFocused: Bool
 
     var body: some View {
@@ -312,6 +314,12 @@ struct ImageEditorPane: View {
                     .disabled(state.cropRect == nil)
             }
             Spacer()
+            if let onExtractText {
+                Button(action: onExtractText) {
+                    Label("Extract Text", systemImage: "text.viewfinder")
+                }
+                .help("Recognize text in this screenshot and show it as markdown")
+            }
         }
         .padding(10)
     }
