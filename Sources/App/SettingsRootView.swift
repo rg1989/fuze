@@ -42,6 +42,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
 /// collapses 8 tabs into an overflow chevron menu; this never does.
 struct SettingsRootView: View {
     @State private var selection: SettingsTab = .general
+    @State private var hovered: SettingsTab?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -53,31 +54,39 @@ struct SettingsRootView: View {
         .frame(minWidth: 800, minHeight: 560)
     }
 
+    /// Icon-only tabs (so all N fit without clipping the window), with the tab
+    /// name shown in a label below that follows the hovered tab and falls back to
+    /// the selected tab — you always see where you are, and can discover the rest
+    /// by hovering. A native tooltip mirrors the name for accessibility.
     private var tabBar: some View {
-        HStack(spacing: 2) {
-            ForEach(SettingsTab.allCases) { tab in
-                Button {
-                    selection = tab
-                } label: {
-                    VStack(spacing: 3) {
+        VStack(spacing: 3) {
+            HStack(spacing: 4) {
+                ForEach(SettingsTab.allCases) { tab in
+                    Button {
+                        selection = tab
+                    } label: {
                         Image(systemName: tab.icon)
                             .font(.system(size: 17))
-                            .frame(height: 20)
-                        Text(tab.title)
-                            .font(.caption)
-                            .multilineTextAlignment(.center)
-                            .lineLimit(2)
-                            .minimumScaleFactor(0.8)
+                            .frame(width: 42, height: 34)
+                            .contentShape(Rectangle())
                     }
-                    .frame(width: 86, height: 56)
-                    .contentShape(Rectangle())
+                    .buttonStyle(.plain)
+                    .foregroundStyle(selection == tab ? Color.accentColor : Color.secondary)
+                    .background(
+                        selection == tab ? Color.accentColor.opacity(0.13)
+                            : (hovered == tab ? Color.primary.opacity(0.06) : Color.clear),
+                        in: RoundedRectangle(cornerRadius: 8))
+                    .help(tab.title)
+                    .onHover { inside in
+                        if inside { hovered = tab } else if hovered == tab { hovered = nil }
+                    }
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(selection == tab ? Color.accentColor : Color.secondary)
-                .background(
-                    selection == tab ? Color.accentColor.opacity(0.13) : Color.clear,
-                    in: RoundedRectangle(cornerRadius: 8))
             }
+            Text((hovered ?? selection).title)
+                .font(.caption)
+                .foregroundStyle(hovered == nil ? .secondary : .primary)
+                .frame(height: 14)
+                .animation(.easeOut(duration: 0.1), value: hovered)
         }
         .padding(.vertical, 8)
         .frame(maxWidth: .infinity)
